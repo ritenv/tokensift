@@ -41,3 +41,22 @@ export interface Payload {
 }
 
 export type AnalysisInput = string | Message[] | Payload;
+
+export interface Fix {
+  description: string;
+  range: [number, number];
+  replacement: string;
+}
+
+export interface Finding {
+  ruleId: string;
+  severity: Severity;
+  message: string;
+  why: string;
+  loc: { input: InputRef; range: [number, number]; messageIndex?: number };
+  tokens: { current: number; afterFix: number; saved: number };
+  cost?: { perCall: Money; atVolume?: Money };
+  fix?: Fix;
+  suggestion?: string;
+  confidence: Confidence;
+}
