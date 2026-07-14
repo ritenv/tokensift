@@ -60,3 +60,28 @@ export interface Finding {
   suggestion?: string;
   confidence: Confidence;
 }
+
+export interface TokenSpan {
+  text: string;
+  id: number;
+  byteRange: [number, number];
+}
+
+export type TokenClass =
+  | "word"
+  | "punct"
+  | "whitespace"
+  | "digit-fragment"
+  | "hex-fragment"
+  | "other";
+
+export interface TokenView {
+  text: string;
+  tokens: TokenSpan[];
+  count: number;
+  stats: {
+    charsPerToken: number;
+    whitespaceShare: number;
+    classHistogram: Record<TokenClass, number>;
+  };
+}
