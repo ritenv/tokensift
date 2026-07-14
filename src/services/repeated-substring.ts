@@ -1,3 +1,5 @@
+import type { RepeatedSpan, TokenSpan } from "../types.js";
+
 // standard online suffix automaton (Blumer et al). len(state) = longest
 // string ending there, link = next shorter equivalence class down.
 //
@@ -78,4 +80,72 @@ export class SuffixAutomaton {
       }
     }
   }
+}
+
+// The automaton knows how many times a string repeats but not where, so
+// find() re-scans the token stream for the rest of the occurrences once it
+// knows which states are worth reporting. Two states can have the same cnt
+// without being the same repeat -- "you are" and "you are a" can both occur
+// twice at shifted offsets -- so dedup happens on the actual set of
+// occurrence start positions, not on cnt equality up the link tree like
+// you'd do for plain distinct-substring counting. Longest span per start-set
+// wins, shorter ones sharing that exact start-set are implied by it.
+export interface RepeatedSubstringIndex {
+  find(minTokens: number): RepeatedSpan[];
+}
+
+export function buildRepeatedSubstringIndex(tokens: TokenSpan[]): RepeatedSubstringIndex {
+  const words = tokens.map((t) => t.text);
+  const sam = new SuffixAutomaton();
+  words.forEach((w, i) => sam.extend(w, i));
+  sam.propagate();
+
+  const charStart: number[] = [];
+  let running = 0;
+  for (const t of tokens) {
+    charStart.push(running);
+    running += t.text.length;
+  }
+  const textEnd = running;
+
+  return {
+    find(minTokens: number): RepeatedSpan[] {
+      const byOccurrenceSignature = new Map<string, { len: number; starts: number[] }>();
+
+      for (let i = 1; i < sam.states.length; i++) {
+        const s = sam.states[i]!;
+        if (s.cnt < 2 || s.len < minTokens) continue;
+
+        const start = s.firstEnd - s.len + 1;
+        const pattern = words.slice(start, s.firstEnd + 1);
+        const starts: number[] = [];
+        for (let j = 0; j + pattern.length <= words.length; j++) {
+          if (pattern.every((w, k) => words[j + k] === w)) starts.push(j);
+        }
+        if (starts.length < 2) continue;
+
+        const signature = starts.join(",");
+        const existing = byOccurrenceSignature.get(signature);
+        if (!existing || existing.len < s.len) {
+          byOccurrenceSignature.set(signature, { len: s.len, starts });
+        }
+      }
+
+      const spans: RepeatedSpan[] = [];
+      for (const { len, starts } of byOccurrenceSignature.values()) {
+        const occurrences: [number, number][] = starts.map((j) => {
+          const from = charStart[j]!;
+          const to = j + len < charStart.length ? charStart[j + len]! : textEnd;
+          return [from, to];
+        });
+        spans.push({
+          text: words.slice(starts[0]!, starts[0]! + len).join(""),
+          occurrences,
+          tokenCost: len * (starts.length - 1),
+        });
+      }
+      spans.sort((a, b) => b.tokenCost - a.tokenCost);
+      return spans;
+    },
+  };
 }
