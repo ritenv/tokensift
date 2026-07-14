@@ -85,3 +85,22 @@ export interface TokenView {
     classHistogram: Record<TokenClass, number>;
   };
 }
+
+export interface JsonRegion {
+  range: [number, number];
+  text: string;
+  value: unknown;
+}
+
+export interface RepeatedSpan {
+  text: string;
+  occurrences: [number, number][];
+  tokenCost: number;
+}
+
+export interface Slot {
+  name: string;
+  range: [number, number];
+  sample?: string;
+  maxTokens?: number;
+}
