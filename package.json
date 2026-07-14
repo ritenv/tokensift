@@ -1,0 +1,52 @@
+{
+  "name": "toklint",
+  "version": "0.1.0",
+  "description": "Token-efficiency linter for LLM prompts and payloads",
+  "keywords": ["llm", "tokens", "linter", "openai", "anthropic", "prompt-engineering"],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "dependencies": {
+    "gpt-tokenizer": "^3.4.0"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "changeset": "changeset",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.16.4",
+    "@biomejs/biome": "^1.9.4",
+    "@changesets/cli": "^2.27.11",
+    "publint": "^0.2.12",
+    "tsdown": "^0.5.6",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@9.15.9"
+}
