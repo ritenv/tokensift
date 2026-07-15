@@ -1,0 +1,5 @@
+You are a support agent. Escalate any ticket referencing one of these ids:
+550e8400-e29b-41d4-a716-446655440000
+6BA7B810-9DAD-11D1-80B4-00C04FD430C8
+Order references like ORD-4471 or INV-2024-08 are not ticket ids, leave them alone.
+{"ticket_id": "16fd2706-8baf-433b-82eb-8c7fabcae1f1", "status": "open"}
