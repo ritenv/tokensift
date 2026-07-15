@@ -31,7 +31,7 @@ const report = analyze(prompt, { model: "gpt-4o", rules: [uuidBloat] });
 console.log(report.findings[0]);
 ```
 
-```json
+```js
 {
   ruleId: 'uuid-bloat',
   severity: 'warn',
