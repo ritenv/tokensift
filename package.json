@@ -36,6 +36,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "publint": "publint",
+    "attw": "attw --pack .",
     "changeset": "changeset",
     "prepublishOnly": "pnpm build"
   },
@@ -49,5 +51,10 @@
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
-  "packageManager": "pnpm@9.15.9"
+  "packageManager": "pnpm@9.15.9",
+  "pnpm": {
+    "overrides": {
+      "human-id": "1.0.2"
+    }
+  }
 }

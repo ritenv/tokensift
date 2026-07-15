@@ -4,3 +4,5 @@ dist
 .DS_Store
 coverage
 toklint-spec.md
+bun.lock
+bun.lockb
