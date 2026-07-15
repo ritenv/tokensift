@@ -40,7 +40,7 @@ export interface Payload {
   tools?: ToolSchema[];
 }
 
-export type AnalysisInput = string | Message[] | Payload;
+export type AnalysisInput = string | Message[] | Payload | TaggedPrompt;
 
 export interface Fix {
   description: string;
@@ -103,4 +103,9 @@ export interface Slot {
   range: [number, number];
   sample?: string;
   maxTokens?: number;
+}
+
+export interface TaggedPrompt {
+  text: string;
+  slots: Slot[];
 }
