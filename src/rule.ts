@@ -2,6 +2,11 @@ import type { Encoder } from "./encoder.js";
 import type { RepeatedSubstringIndex } from "./services/repeated-substring.js";
 import type { Finding, InputRef, JsonRegion, Message, Severity, Slot, TokenView } from "./types.js";
 
+export interface ProviderProfile {
+  messageOverheadTokens?: number;
+  cacheMinTokens?: number;
+}
+
 export interface AnalysisContext {
   text: string;
   inputRef: InputRef;
@@ -11,6 +16,10 @@ export interface AnalysisContext {
   repeated: RepeatedSubstringIndex;
   slots: Slot[];
   messages?: Message[];
+  /** leading-whitespace char count per line, index-aligned with text.split("\n") */
+  indentMap: number[];
+  /** overheads/cache constants per provider; no curated data yet, always undefined for now */
+  providerProfile?: ProviderProfile;
 }
 
 export interface Rule {

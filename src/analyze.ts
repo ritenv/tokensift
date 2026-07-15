@@ -2,7 +2,23 @@ import { resolveEncoder } from "./encoder.js";
 import type { AnalysisContext, Rule } from "./rule.js";
 import { findJsonRegions } from "./services/json-regions.js";
 import { buildRepeatedSubstringIndex } from "./services/repeated-substring.js";
-import type { AnalysisInput, ContentPart, Finding, InputRef, Message, Slot } from "./types.js";
+import type {
+  AnalysisInput,
+  ContentPart,
+  Finding,
+  InputRef,
+  Message,
+  Slot,
+  TokenView,
+} from "./types.js";
+
+export interface TokenizeOptions {
+  model: string;
+}
+
+export function tokenize(text: string, options: TokenizeOptions): TokenView {
+  return resolveEncoder(options.model).tokenize(text);
+}
 
 export interface AnalyzeOptions {
   model: string;
@@ -70,6 +86,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     repeated: buildRepeatedSubstringIndex(tokenView.tokens),
     slots,
     messages,
+    indentMap: text.split("\n").map((line) => line.length - line.trimStart().length),
   };
 
   const findings: Finding[] = [];

@@ -83,6 +83,7 @@ export interface TokenView {
     charsPerToken: number;
     whitespaceShare: number;
     classHistogram: Record<TokenClass, number>;
+    perLineCosts: number[];
   };
 }
 

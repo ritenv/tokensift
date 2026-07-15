@@ -39,6 +39,8 @@ function buildTokenView(text: string, mod: TokenizerModule): TokenView {
   };
   let byteOffset = 0;
   let whitespaceTokens = 0;
+  let line = 0;
+  const perLineCosts: number[] = [0];
   for (const id of ids) {
     const tokText = mod.decode([id]);
     const byteLen = textEncoder.encode(tokText).length;
@@ -47,6 +49,17 @@ function buildTokenView(text: string, mod: TokenizerModule): TokenView {
     const cls = classify(tokText);
     classHistogram[cls] += 1;
     if (cls === "whitespace") whitespaceTokens += 1;
+
+    // a token is charged to whichever line it starts on; if its own text
+    // crosses a newline (rare, but "\n\n" is a real single token) later
+    // tokens land on the line after
+    perLineCosts[line] = (perLineCosts[line] ?? 0) + 1;
+    for (const ch of tokText) {
+      if (ch === "\n") {
+        line += 1;
+        perLineCosts[line] = 0;
+      }
+    }
   }
   return {
     text,
@@ -56,6 +69,7 @@ function buildTokenView(text: string, mod: TokenizerModule): TokenView {
       charsPerToken: tokens.length === 0 ? 0 : text.length / tokens.length,
       whitespaceShare: tokens.length === 0 ? 0 : whitespaceTokens / tokens.length,
       classHistogram,
+      perLineCosts,
     },
   };
 }

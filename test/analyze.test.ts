@@ -67,4 +67,24 @@ Ticket: ${dyn("ticketBody", { sample: "my billing failed twice this month" })}`;
     const report = analyze(messages, { model: "gpt-4o", rules: [flagsPlease] });
     expect(report.findings).toHaveLength(1);
   });
+
+  it("gives rules an indent map, one entry per line", () => {
+    let seen: number[] = [];
+    const capturesIndent: Rule = {
+      id: "captures-indent",
+      defaultSeverity: "info",
+      why: "test fixture rule",
+      check(ctx) {
+        seen = ctx.indentMap;
+        return [];
+      },
+    };
+
+    analyze("no indent\n    four spaces\n\teight-ish (tab)", {
+      model: "gpt-4o",
+      rules: [capturesIndent],
+    });
+
+    expect(seen).toEqual([0, 4, 1]);
+  });
 });
