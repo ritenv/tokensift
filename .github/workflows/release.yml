@@ -24,8 +24,9 @@ jobs:
           node-version: 22
           cache: pnpm
       # trusted publishing needs a recent npm CLI to do the OIDC exchange;
-      # whatever ships with the runner's node 22 isn't guaranteed new enough
-      - run: npm install -g npm@latest
+      # pinned to 11.x on purpose, npm 12 drops the --git-checks flag that
+      # @changesets/cli still passes internally, so "latest" breaks publish
+      - run: npm install -g npm@11
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
