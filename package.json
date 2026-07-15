@@ -29,8 +29,8 @@
     "gpt-tokenizer": "^3.4.0"
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome check .",
@@ -40,12 +40,12 @@
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.16.4",
+    "@arethetypeswrong/cli": "^0.18.5",
     "@biomejs/biome": "^1.9.4",
     "@changesets/cli": "^2.27.11",
     "@types/node": "^26.1.1",
     "publint": "^0.2.12",
-    "tsdown": "^0.5.6",
+    "tsup": "^8.5.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
