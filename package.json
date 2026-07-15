@@ -1,9 +1,13 @@
 {
-  "name": "toklint",
+  "name": "tokensift",
   "version": "0.1.0",
   "description": "Token-efficiency linter for LLM prompts and payloads",
   "keywords": ["llm", "tokens", "linter", "openai", "anthropic", "prompt-engineering"],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ritenv/tokensift.git"
+  },
   "type": "module",
   "sideEffects": false,
   "engines": {

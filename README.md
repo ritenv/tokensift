@@ -1,4 +1,4 @@
-# toklint
+# tokensift
 
 Token-efficiency linter for LLM prompts and payloads.
 
@@ -9,7 +9,7 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
 ## Install
 
 ```
-pnpm add toklint
+pnpm add tokensift
 ```
 
 ## Usage
@@ -19,7 +19,7 @@ engineer can find it in the logs. The model never has to parse the UUID,
 just echo it, so a short id works just as well:
 
 ```ts
-import { analyze, uuidBloat } from "toklint";
+import { analyze, uuidBloat } from "tokensift";
 
 const prompt = `You are an incident triage assistant. Summarize the error below for the
 on-call engineer, and repeat the trace id so they can search the logs.
@@ -54,7 +54,7 @@ id; the model just never had to spend 18 tokens tokenizing it.
 Real prompts have dynamic regions. Mark them with `dyn()` so analysis doesn't mis-tokenize a placeholder, and so static cost can be split from dynamic budget:
 
 ```ts
-import { t, dyn, analyze } from "toklint";
+import { t, dyn, analyze } from "tokensift";
 
 const prompt = t`You are a support agent.
 Ticket: ${dyn("ticketBody", { sample: "my billing failed twice" })}`;
@@ -77,7 +77,7 @@ report.summary.dynamicBudget;
 - The rest of the rule catalog.
 - CLI, reporters, pricing data.
 - `diff()` and `budget()` are stubs that throw.
-- `toklint/matchers`, `toklint/mcp`, `toklint/action`.
+- `tokensift/matchers`, `tokensift/mcp`, `tokensift/action`.
 
 ## Non-goals
 
@@ -85,7 +85,7 @@ No LLM-powered rewriting here, that's a different product with different trust p
 
 No runtime proxying, request interception or usage dashboards: that space is already covered elsewhere.
 
-toklint doesn't judge prompt quality. It says "this costs more tokens than an equivalent structure".
+tokensift doesn't judge prompt quality. It says "this costs more tokens than an equivalent structure".
 
 No telemetry, accounts or background network calls. The only network calls this will ever make are pricing refreshes and opt-in provider token-count verification, both explicit.
 

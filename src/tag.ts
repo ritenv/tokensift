@@ -6,16 +6,16 @@ export interface DynOptions {
 }
 
 interface DynMarker extends DynOptions {
-  toklintDyn: true;
+  tokensiftDyn: true;
   name: string;
 }
 
 export function dyn(name: string, options: DynOptions = {}): DynMarker {
-  return { toklintDyn: true, name, ...options };
+  return { tokensiftDyn: true, name, ...options };
 }
 
 function isDynMarker(value: unknown): value is DynMarker {
-  return typeof value === "object" && value !== null && (value as DynMarker).toklintDyn === true;
+  return typeof value === "object" && value !== null && (value as DynMarker).tokensiftDyn === true;
 }
 
 export function t(strings: TemplateStringsArray, ...values: unknown[]): TaggedPrompt {
