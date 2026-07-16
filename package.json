@@ -2,14 +2,7 @@
   "name": "tokensift",
   "version": "0.2.0",
   "description": "Token-efficiency linter for LLM prompts and payloads",
-  "keywords": [
-    "llm",
-    "tokens",
-    "linter",
-    "openai",
-    "anthropic",
-    "prompt-engineering"
-  ],
+  "keywords": ["llm", "tokens", "linter", "openai", "anthropic", "prompt-engineering"],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -35,9 +28,7 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "dependencies": {
     "gpt-tokenizer": "^3.4.0"
   },
