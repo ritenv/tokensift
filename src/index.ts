@@ -8,6 +8,7 @@ export {
   base64Blob,
   builtinRules,
   digitFragmentation,
+  duplicateMessageContent,
   highEntropyString,
   prettyJson,
   repeatedBlock,

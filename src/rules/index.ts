@@ -1,5 +1,6 @@
 import { base64Blob } from "./base64-blob.js";
 import { digitFragmentation } from "./digit-fragmentation.js";
+import { duplicateMessageContent } from "./duplicate-message-content.js";
 import { highEntropyString } from "./high-entropy-string.js";
 import { prettyJson } from "./pretty-json.js";
 import { repeatedBlock } from "./repeated-block.js";
@@ -16,6 +17,7 @@ export const builtinRules = [
   base64Blob,
   highEntropyString,
   digitFragmentation,
+  duplicateMessageContent,
 ];
 
 export {
@@ -27,4 +29,5 @@ export {
   base64Blob,
   highEntropyString,
   digitFragmentation,
+  duplicateMessageContent,
 };
