@@ -7,6 +7,7 @@ export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,
   builtinRules,
+  digitFragmentation,
   highEntropyString,
   prettyJson,
   repeatedBlock,
