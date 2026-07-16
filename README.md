@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and one real rule (`uuid-bloat`). Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and five rules. Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -49,6 +49,36 @@ the call, and swap the model's `id-1` back to the real UUID in your own code
 before showing the summary to the engineer. The engineer still gets the real
 id; the model just never had to spend 18 tokens tokenizing it.
 
+### Running everything at once
+
+`builtinRules` runs every shipped rule together. Here's a support-ticket classifier prompt with two few-shot examples and an output schema, the kind of thing that grows by copy-paste:
+
+```ts
+import { analyze, builtinRules } from "tokensift";
+
+const prompt = `You are a support ticket classifier. Classify each ticket into one of: billing, technical, account.
+
+Example 1:
+Ticket: "I was charged twice this month"
+Classification: billing
+Remember to respond with only the category name, nothing else.
+
+Example 2:
+Ticket: "I can't reset my password"
+Classification: account
+Remember to respond with only the category name, nothing else.
+
+Output using this schema:
+{
+  "category": "string",
+  "confidence": "number"
+}`;
+
+const report = analyze(prompt, { model: "gpt-4o", rules: builtinRules });
+```
+
+That's 101 tokens total, and two rules both fire: `repeated-block` catches the reminder line pasted after each example (26 tokens for something said once would cost 13), and `pretty-json` catches the indented schema (16 tokens vs 9 minified).
+
 ### Template slots
 
 Real prompts have dynamic regions. Mark them with `dyn()` so analysis doesn't mis-tokenize a placeholder, and so static cost can be split from dynamic budget:
@@ -68,7 +98,7 @@ report.summary.dynamicBudget;
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
-- One rule: `uuid-bloat`.
+- Five rules: `uuid-bloat`, `unicode-punct`, `whitespace-run`, `pretty-json`, `repeated-block`.
 - `t` / `dyn` for template-aware analysis.
 
 ## What's not here yet
