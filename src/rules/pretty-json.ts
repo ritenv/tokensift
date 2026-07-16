@@ -29,11 +29,13 @@ export const prettyJson = defineRule({
         why: WHY,
         loc: { input: ctx.inputRef, range: [start, end] },
         tokens: { current, afterFix, saved: current - afterFix },
-        fix: {
-          description: "minify JSON region",
-          range: [start, end],
-          replacement: minified,
-        },
+        fix: ctx.autofix
+          ? {
+              description: "minify JSON region",
+              range: [start, end],
+              replacement: minified,
+            }
+          : undefined,
         suggestion: SUGGESTION,
         confidence: ctx.encoder.mode,
       });

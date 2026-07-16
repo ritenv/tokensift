@@ -48,11 +48,13 @@ export const whitespaceRun = defineRule({
         why: WHY,
         loc: { input: ctx.inputRef, range: [hit.start, hit.end] },
         tokens: { current, afterFix, saved: current - afterFix },
-        fix: {
-          description: "collapse whitespace run",
-          range: [hit.start, hit.end],
-          replacement: hit.replacement,
-        },
+        fix: ctx.autofix
+          ? {
+              description: "collapse whitespace run",
+              range: [hit.start, hit.end],
+              replacement: hit.replacement,
+            }
+          : undefined,
         suggestion: SUGGESTION,
         confidence: ctx.encoder.mode,
       });

@@ -20,6 +20,8 @@ export interface AnalysisContext {
   indentMap: number[];
   /** overheads/cache constants per provider; no curated data yet, always undefined for now */
   providerProfile?: ProviderProfile;
+  /** whether rules that can autofix should attach a Finding.fix; defaults to true */
+  autofix: boolean;
 }
 
 export interface Rule {

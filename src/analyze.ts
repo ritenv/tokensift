@@ -23,6 +23,8 @@ export function tokenize(text: string, options: TokenizeOptions): TokenView {
 export interface AnalyzeOptions {
   model: string;
   rules?: Rule[];
+  /** whether rules that can autofix should attach a Finding.fix; defaults to true */
+  autofix?: boolean;
 }
 
 export interface Report {
@@ -87,6 +89,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     slots,
     messages,
     indentMap: text.split("\n").map((line) => line.length - line.trimStart().length),
+    autofix: options.autofix ?? true,
   };
 
   const findings: Finding[] = [];

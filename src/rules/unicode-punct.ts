@@ -42,11 +42,13 @@ export const unicodePunct = defineRule({
         why: WHY,
         loc: { input: ctx.inputRef, range: [start, start + char.length] },
         tokens: { current, afterFix, saved: current - afterFix },
-        fix: {
-          description: `normalize '${char}' to '${replacement}'`,
-          range: [start, start + char.length],
-          replacement,
-        },
+        fix: ctx.autofix
+          ? {
+              description: `normalize '${char}' to '${replacement}'`,
+              range: [start, start + char.length],
+              replacement,
+            }
+          : undefined,
         suggestion: SUGGESTION,
         confidence: ctx.encoder.mode,
       });
