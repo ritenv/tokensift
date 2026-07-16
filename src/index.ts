@@ -4,7 +4,7 @@ export { createLinter, defineConfig } from "./config.js";
 export type { Config, VolumeConfig } from "./config.js";
 export { resolveEncoder } from "./encoder.js";
 export type { AnalysisContext, Rule } from "./rule.js";
-export { builtinRules, unicodePunct, uuidBloat } from "./rules/index.js";
+export { builtinRules, unicodePunct, uuidBloat, whitespaceRun } from "./rules/index.js";
 export { dyn, t } from "./tag.js";
 export type * from "./types.js";
 
