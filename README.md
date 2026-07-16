@@ -103,18 +103,18 @@ report.summary.dynamicBudget;
 
 ## Rules
 
-| Rule | Severity | Why | Suggestion |
-| --- | --- | --- | --- |
-| `uuid-bloat` | warn | UUIDs have no BPE merges, so they cost close to 1 token per 1-2 characters | map to a short id before prompting, restore it after |
-| `unicode-punct` | info | smart quotes, em-dashes, NBSP, zero-width chars often cost more than their ASCII equivalents and slip in via copy-paste | normalize to the ASCII equivalent (autofix) |
-| `whitespace-run` | warn | long runs of spaces or blank lines are real tokens once past the tokenizer's merge boundary | collapse the run (autofix) |
-| `pretty-json` | warn | indentation and newlines in pretty-printed JSON cost tokens the model doesn't need to parse the data | minify the JSON region (autofix) |
-| `repeated-block` | warn | a verbatim span repeated across a prompt is paid every time it appears | state it once, refer back to it |
-| `base64-blob` | error | base64 has no word structure for BPE, so it runs close to 1 token per 1.3-1.5 characters | use the provider's file/image API instead of inlining |
-| `high-entropy-string` | info | random strings (keys, cache ids) fragment close to character-per-token | reference by a short id, or keep it out of the prompt if it's a credential |
-| `digit-fragmentation` | info | a full ISO-8601 timestamp tokenizes far worse than the epoch seconds it represents | store and pass epoch seconds, format for display only |
-| `duplicate-message-content` | warn | identical content repeated across messages is usually a template bug, paid every call | say it once, let the model refer back |
-| `filler` | info | hedging phrases are token cost with no instruction content | state the request directly |
+| Rule | Severity | Autofix | Why | Suggestion |
+| --- | --- | --- | --- | --- |
+| `uuid-bloat` | warn | no | UUIDs have no BPE merges, so they cost close to 1 token per 1-2 characters | map to a short id before prompting, restore it after |
+| `unicode-punct` | info | yes | smart quotes, em-dashes, NBSP, zero-width chars often cost more than their ASCII equivalents and slip in via copy-paste | normalize to the ASCII equivalent |
+| `whitespace-run` | warn | yes | long runs of spaces or blank lines are real tokens once past the tokenizer's merge boundary | collapse the run |
+| `pretty-json` | warn | yes | indentation and newlines in pretty-printed JSON cost tokens the model doesn't need to parse the data | minify the JSON region |
+| `repeated-block` | warn | no | a verbatim span repeated across a prompt is paid every time it appears | state this block once and refer back to it instead of repasting it |
+| `base64-blob` | error | no | base64 has no word structure for BPE, so it runs close to 1 token per 1.3-1.5 characters | pass the file through the provider's file/image API or a reference id instead of inlining it |
+| `high-entropy-string` | info | no | random strings (keys, cache ids) fragment close to character-per-token | reference this value by a short id, or keep it out of the prompt entirely if it's a credential |
+| `digit-fragmentation` | info | no | a full ISO-8601 timestamp tokenizes far worse than the epoch seconds it represents | store and pass epoch seconds; format as a human-readable date only where it's displayed |
+| `duplicate-message-content` | warn | no | identical content repeated across messages is usually a template bug, paid every call | say it once and let the model refer back to the earlier message |
+| `filler` | info | no | hedging phrases are token cost with no instruction content | state the request directly, drop the hedging |
 
 ## What's not here yet
 
