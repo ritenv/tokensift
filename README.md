@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and five rules. Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and ten rules. Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -98,7 +98,7 @@ report.summary.dynamicBudget;
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
-- Five rules: `uuid-bloat`, `unicode-punct`, `whitespace-run`, `pretty-json`, `repeated-block`.
+- Ten rules: `uuid-bloat`, `unicode-punct`, `whitespace-run`, `pretty-json`, `repeated-block`, `base64-blob`, `high-entropy-string`, `digit-fragmentation`, `duplicate-message-content`, `filler`.
 - `t` / `dyn` for template-aware analysis.
 
 ## What's not here yet
