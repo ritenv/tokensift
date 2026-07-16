@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and five rules. Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and ten rules. Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -98,8 +98,23 @@ report.summary.dynamicBudget;
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
-- Five rules: `uuid-bloat`, `unicode-punct`, `whitespace-run`, `pretty-json`, `repeated-block`.
+- Ten rules, see the table below.
 - `t` / `dyn` for template-aware analysis.
+
+## Rules
+
+| Rule | Severity | Autofix | Why | Suggestion |
+| --- | --- | --- | --- | --- |
+| `uuid-bloat` | warn | no | UUIDs have no BPE merges, so they cost close to 1 token per 1-2 characters | map to a short id before prompting, restore it after |
+| `unicode-punct` | info | yes | smart quotes, em-dashes, NBSP, zero-width chars often cost more than their ASCII equivalents and slip in via copy-paste | normalize to the ASCII equivalent |
+| `whitespace-run` | warn | yes | long runs of spaces or blank lines are real tokens once past the tokenizer's merge boundary | collapse the run |
+| `pretty-json` | warn | yes | indentation and newlines in pretty-printed JSON cost tokens the model doesn't need to parse the data | minify the JSON region |
+| `repeated-block` | warn | no | a verbatim span repeated across a prompt is paid every time it appears | state this block once and refer back to it instead of repasting it |
+| `base64-blob` | error | no | base64 has no word structure for BPE, so it runs close to 1 token per 1.3-1.5 characters | pass the file through the provider's file/image API or a reference id instead of inlining it |
+| `high-entropy-string` | info | no | random strings (keys, cache ids) fragment close to character-per-token | reference this value by a short id, or keep it out of the prompt entirely if it's a credential |
+| `digit-fragmentation` | info | no | a full ISO-8601 timestamp tokenizes far worse than the epoch seconds it represents | store and pass epoch seconds; format as a human-readable date only where it's displayed |
+| `duplicate-message-content` | warn | no | identical content repeated across messages is usually a template bug, paid every call | say it once and let the model refer back to the earlier message |
+| `filler` | info | no | hedging phrases are token cost with no instruction content | state the request directly, drop the hedging |
 
 ## What's not here yet
 

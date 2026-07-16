@@ -18,6 +18,8 @@ const PATTERN = new RegExp(`[${Object.keys(NORMALIZE).join("")}]`, "g");
 const WHY =
   "smart quotes, em-dashes, NBSP and zero-width chars often cost more per glyph than their ASCII equivalents, and slip in unnoticed via copy-paste";
 
+const SUGGESTION = "normalize to the ASCII equivalent";
+
 export const unicodePunct = defineRule({
   id: "unicode-punct",
   defaultSeverity: "info",
@@ -40,11 +42,14 @@ export const unicodePunct = defineRule({
         why: WHY,
         loc: { input: ctx.inputRef, range: [start, start + char.length] },
         tokens: { current, afterFix, saved: current - afterFix },
-        fix: {
-          description: `normalize '${char}' to '${replacement}'`,
-          range: [start, start + char.length],
-          replacement,
-        },
+        fix: ctx.autofix
+          ? {
+              description: `normalize '${char}' to '${replacement}'`,
+              range: [start, start + char.length],
+              replacement,
+            }
+          : undefined,
+        suggestion: SUGGESTION,
         confidence: ctx.encoder.mode,
       });
     }

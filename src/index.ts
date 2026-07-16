@@ -5,7 +5,12 @@ export type { Config, VolumeConfig } from "./config.js";
 export { resolveEncoder } from "./encoder.js";
 export type { AnalysisContext, Rule } from "./rule.js";
 export {
+  base64Blob,
   builtinRules,
+  digitFragmentation,
+  duplicateMessageContent,
+  filler,
+  highEntropyString,
   prettyJson,
   repeatedBlock,
   unicodePunct,

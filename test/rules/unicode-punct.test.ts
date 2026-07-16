@@ -21,6 +21,19 @@ describe("unicode-punct", () => {
     expect(chars).toContain("");
   });
 
+  it("drops fix and falls back to a plain suggestion when autofix is off", () => {
+    const report = analyze("the customer said “it’s broken”", {
+      model: "gpt-4o",
+      rules: [unicodePunct],
+      autofix: false,
+    });
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.findings.every((f) => f.fix === undefined)).toBe(true);
+    expect(report.findings.every((f) => f.suggestion === "normalize to the ASCII equivalent")).toBe(
+      true,
+    );
+  });
+
   it("finds nothing in plain ASCII prose", () => {
     const report = analyze('the customer said "it\'s broken"', {
       model: "gpt-4o",

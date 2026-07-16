@@ -43,6 +43,7 @@
     "publint": "publint",
     "attw": "attw --pack .",
     "changeset": "changeset",
+    "changeset:version": "changeset version && biome check --write .",
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {

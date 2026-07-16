@@ -8,6 +8,8 @@ const BLANK_LINES = /\n{3,}/g;
 const WHY =
   "runs of spaces and blank lines are real tokens, not free formatting; trailing whitespace costs the same as visible characters";
 
+const SUGGESTION = "collapse the run";
+
 function collect(text: string, pattern: RegExp, replacement: (match: string) => string) {
   const hits: { start: number; end: number; replacement: string }[] = [];
   for (const match of text.matchAll(pattern)) {
@@ -46,11 +48,14 @@ export const whitespaceRun = defineRule({
         why: WHY,
         loc: { input: ctx.inputRef, range: [hit.start, hit.end] },
         tokens: { current, afterFix, saved: current - afterFix },
-        fix: {
-          description: "collapse whitespace run",
-          range: [hit.start, hit.end],
-          replacement: hit.replacement,
-        },
+        fix: ctx.autofix
+          ? {
+              description: "collapse whitespace run",
+              range: [hit.start, hit.end],
+              replacement: hit.replacement,
+            }
+          : undefined,
+        suggestion: SUGGESTION,
         confidence: ctx.encoder.mode,
       });
     }

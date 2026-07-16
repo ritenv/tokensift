@@ -12,6 +12,8 @@ export interface Config {
   model: string;
   volume?: VolumeConfig;
   rules?: Record<string, Severity | "off">;
+  /** whether rules that can autofix should attach a Finding.fix; defaults to true */
+  autofix?: boolean;
 }
 
 export function defineConfig(config: Config): Config {
@@ -31,6 +33,7 @@ function selectRules(rules: Rule[], overrides: Config["rules"]): Rule[] {
 export function createLinter(config: Config) {
   const rules = selectRules(builtinRules, config.rules);
   return {
-    analyze: (input: AnalysisInput) => analyze(input, { model: config.model, rules }),
+    analyze: (input: AnalysisInput) =>
+      analyze(input, { model: config.model, rules, autofix: config.autofix }),
   };
 }

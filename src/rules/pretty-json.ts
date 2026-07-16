@@ -4,6 +4,8 @@ import type { Finding } from "../types.js";
 const WHY =
   "indented JSON spends tokens on newlines and leading spaces at every nesting level; the model doesn't need pretty-printing to parse structured data";
 
+const SUGGESTION = "minify the JSON region";
+
 export const prettyJson = defineRule({
   id: "pretty-json",
   defaultSeverity: "warn",
@@ -27,11 +29,14 @@ export const prettyJson = defineRule({
         why: WHY,
         loc: { input: ctx.inputRef, range: [start, end] },
         tokens: { current, afterFix, saved: current - afterFix },
-        fix: {
-          description: "minify JSON region",
-          range: [start, end],
-          replacement: minified,
-        },
+        fix: ctx.autofix
+          ? {
+              description: "minify JSON region",
+              range: [start, end],
+              replacement: minified,
+            }
+          : undefined,
+        suggestion: SUGGESTION,
         confidence: ctx.encoder.mode,
       });
     }
