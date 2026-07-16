@@ -9,6 +9,7 @@ export {
   builtinRules,
   digitFragmentation,
   duplicateMessageContent,
+  filler,
   highEntropyString,
   prettyJson,
   repeatedBlock,
