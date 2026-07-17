@@ -14,6 +14,8 @@ export interface Config {
   rules?: Record<string, Severity | "off">;
   /** whether rules that can autofix should attach a Finding.fix; defaults to true */
   autofix?: boolean;
+  /** declared total token budget, used by the budget-exceeded rule */
+  budget?: number;
 }
 
 export function defineConfig(config: Config): Config {
@@ -34,6 +36,11 @@ export function createLinter(config: Config) {
   const rules = selectRules(builtinRules, config.rules);
   return {
     analyze: (input: AnalysisInput) =>
-      analyze(input, { model: config.model, rules, autofix: config.autofix }),
+      analyze(input, {
+        model: config.model,
+        rules,
+        autofix: config.autofix,
+        budget: config.budget,
+      }),
   };
 }

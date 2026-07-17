@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and ten rules. Most of the rule catalog, the CLI, and the reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and seventeen rules. The CLI and reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -98,7 +98,8 @@ report.summary.dynamicBudget;
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
-- Ten rules, see the table below.
+- Seventeen rules, see the table below.
+- A declared token budget (`budget-exceeded`), off by default until you set one.
 - `t` / `dyn` for template-aware analysis.
 
 ## Rules
@@ -115,11 +116,18 @@ report.summary.dynamicBudget;
 | `digit-fragmentation` | info | no | a full ISO-8601 timestamp tokenizes far worse than the epoch seconds it represents | store and pass epoch seconds; format as a human-readable date only where it's displayed |
 | `duplicate-message-content` | warn | no | identical content repeated across messages is usually a template bug, paid every call | say it once and let the model refer back to the earlier message |
 | `filler` | info | no | hedging phrases are token cost with no instruction content | state the request directly, drop the hedging |
+| `row-json` | warn | no | row-oriented JSON repeats every key on every element, N rows means N times the key cost | restructure as columnar JSON or CSV if the model doesn't need per-row objects |
+| `long-keys` | info | no | descriptive keys are re-paid on every row in bulk data | ship a short-key legend once, remap rows to it |
+| `redundant-structure` | info | no | the same data serialized twice costs twice, even reformatted; repeated-block only catches byte-identical repeats | include the data once, refer back to it |
+| `verbose-schema-values` | info | no | enum values with a repeated prefix (STATUS_ACTIVE, STATUS_INACTIVE) pay for that prefix every row | state the shared prefix once, use the suffix per row |
+| `dead-instruction` | info | no | an instruction pointing at a structure that isn't actually there ("as shown above") wastes tokens and confuses the model | remove the dangling reference or add what it points to |
+| `unlabeled-dynamic` | info | no | a large JSON region not wrapped in dyn() gets counted as static cost when it's really per-request data | wrap it with dyn() |
+| `budget-exceeded` | error | no | a declared token budget exists to keep cost and latency predictable, this input broke it | trim static content or tighten dyn() slot samples |
 
 ## What's not here yet
 
 - Anthropic and Gemini encoders. They throw a clear error rather than a guessed count.
-- The rest of the rule catalog.
+- The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D), plus `baseline-regression`. Both need either provider profile data or on-disk state this package doesn't have yet.
 - CLI, reporters, pricing data.
 - `diff()` and `budget()` are stubs that throw.
 - `tokensift/matchers`, `tokensift/mcp`, `tokensift/action`.

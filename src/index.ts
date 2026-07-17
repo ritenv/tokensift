@@ -6,15 +6,22 @@ export { resolveEncoder } from "./encoder.js";
 export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,
+  budgetExceeded,
   builtinRules,
+  deadInstruction,
   digitFragmentation,
   duplicateMessageContent,
   filler,
   highEntropyString,
+  longKeys,
   prettyJson,
+  redundantStructure,
   repeatedBlock,
+  rowJson,
   unicodePunct,
+  unlabeledDynamic,
   uuidBloat,
+  verboseSchemaValues,
   whitespaceRun,
 } from "./rules/index.js";
 export { dyn, t } from "./tag.js";

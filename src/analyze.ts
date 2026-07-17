@@ -25,6 +25,8 @@ export interface AnalyzeOptions {
   rules?: Rule[];
   /** whether rules that can autofix should attach a Finding.fix; defaults to true */
   autofix?: boolean;
+  /** declared total token budget, used by the budget-exceeded rule */
+  budget?: number;
 }
 
 export interface Report {
@@ -90,6 +92,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     messages,
     indentMap: text.split("\n").map((line) => line.length - line.trimStart().length),
     autofix: options.autofix ?? true,
+    budget: options.budget,
   };
 
   const findings: Finding[] = [];

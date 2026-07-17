@@ -22,6 +22,8 @@ export interface AnalysisContext {
   providerProfile?: ProviderProfile;
   /** whether rules that can autofix should attach a Finding.fix; defaults to true */
   autofix: boolean;
+  /** declared total token budget for budget-exceeded; undefined means no budget configured */
+  budget?: number;
 }
 
 export interface Rule {
