@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.4.0
+
+### Minor Changes
+
+- 5e0b39f: Added more rules, add budget, and add ability to disable autofix
+
 ## 0.3.0
 
 ### Minor Changes
