@@ -34,6 +34,22 @@ Yeah these overlap. `repeated-block` just finds repeated text, doesn't know abou
 
 Small on purpose. Judging tone edges toward judging prompt quality, which we don't do. Can grow this later, maybe make it configurable.
 
+## redundant-structure vs repeated-block
+
+Spec describes catching the same data shown twice in different serializations, JSON and a markdown table, say. That needs a table parser we don't have, so scope is narrower: same parsed JSON value appearing twice. Checked this against `repeated-block` directly: for a byte-identical duplicate, `repeated-block` already catches it, so `redundant-structure` is redundant with it there. The case it actually adds is a duplicate that's been reformatted, pretty-printed once and minified once, say, same value, no shared literal text, so the suffix automaton finds nothing. `redundant-structure` compares parsed values instead of raw text, so it still catches that one. Both rules stay, but the real justification is the reformatted case, not the copy-paste case.
+
+## dead-instruction
+
+Regex plus proximity checks, not real reference resolution. Looks for phrases like "as shown above" and checks whether a JSON region or code fence actually sits on the right side. Cheap and conservative on purpose, false negatives beat false positives here.
+
+## unlabeled-dynamic scope
+
+Only fires on JSON regions, not "anything that looks dynamic." A generic version of this is just high-entropy-string again. JSON blocks are the case that actually matters for cache alignment later.
+
+## thresholds are tuned against OpenAI's tokenizer, not universal
+
+`high-entropy-string`'s 3 chars/token cutoff, `repeated-block`'s 8-token minimum, `unlabeled-dynamic`'s 30-token minimum, all fit to o200k_base by actually tokenizing real strings. Worth re-checking once Anthropic's encoder ships instead of assuming they transfer. Most other rules compare real before/after token counts, so they self-calibrate to whatever encoder runs.
+
 ## Provider profile
 
 `AnalysisContext.providerProfile` has a typed shape (message overhead, cache minimums) but nothing populates it yet. Filling it with unverified numbers would be worse than leaving it empty.
