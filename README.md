@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, and seventeen rules. The CLI and reporters don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, seventeen rules, and a CLI with pretty and json output. Most reporters and CLI commands beyond `analyze` don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -94,6 +94,61 @@ report.summary.staticTokens;
 report.summary.dynamicBudget;
 ```
 
+## CLI
+
+Same engine, from a terminal. Point it at a file, a glob, or stdin:
+
+```
+echo "You are an incident triage assistant. Summarize the error below for the
+on-call engineer, and repeat the trace id so they can search the logs.
+
+trace_id: 550e8400-e29b-41d4-a716-446655440000
+error: payment gateway timeout after 30s, 3 consecutive failures" | tokensift --stdin --model gpt-4o
+```
+
+```
+<stdin>
+  warn  uuid-bloat  UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)
+
+1 file(s), 1 finding(s) (0 error, 1 warn, 0 info)
+top opportunities:
+  uuid-bloat (15 tokens)
+total addressable waste ~= 15 tokens
+```
+
+Or against real files: `tokensift prompts/*.md --model gpt-4o`. `**` works too (`tokensift "prompts/**/*.md" --model gpt-4o`), quote it so your shell doesn't expand it first.
+
+`--format json` gives you the full `Report` per file instead, for piping into other tools:
+
+```
+tokensift ticket.md --model gpt-4o --format json
+```
+```js
+{
+  "schemaVersion": 1,
+  "results": [
+    { "file": "ticket.md", "summary": { "totalTokens": 23, ... }, "findings": [ ... ], "byRule": { ... } }
+  ]
+}
+```
+
+`--fix --write` applies the safe autofixes (`unicode-punct`, `whitespace-run`, `pretty-json`) and writes them back to the file. It refuses `.json` inputs outright rather than guessing at how to write them back safely, see [DESIGN.md](./DESIGN.md) for why.
+
+Other flags: `--rules uuid-bloat=off,filler=error`, `--max-warnings n`, `--config <path>`. Exit codes: `0` clean, `1` warnings past `--max-warnings`, `2` any error-severity finding, `3` bad input, bad flags, or a bad config file.
+
+### Config file
+
+Drop a `tokensift.config.json` next to where you run the command, and stop repeating `--model` on every call:
+
+```json
+{
+  "model": "gpt-4o",
+  "rules": { "filler": "off" }
+}
+```
+
+CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` config loading yet.
+
 ## What's here
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
@@ -101,6 +156,7 @@ report.summary.dynamicBudget;
 - Seventeen rules, see the table below.
 - A declared token budget (`budget-exceeded`), off by default until you set one.
 - `t` / `dyn` for template-aware analysis.
+- A `tokensift` CLI: `analyze` command, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file.
 
 ## Rules
 
@@ -128,8 +184,10 @@ report.summary.dynamicBudget;
 
 - Anthropic and Gemini encoders. They throw a clear error rather than a guessed count.
 - The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D), plus `baseline-regression`. Both need either provider profile data or on-disk state this package doesn't have yet.
-- CLI, reporters, pricing data.
-- `diff()` and `budget()` are stubs that throw.
+- Pricing data, `--volume`, and cost fields on findings.
+- The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.
+- `diff`, `budget`/`check`, `extract`, `xray`, `pricing`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too.
+- `.js`/`.ts` config file loading, only `.json` works right now.
 - `tokensift/matchers`, `tokensift/mcp`, `tokensift/action`.
 
 ## Non-goals
