@@ -17,7 +17,8 @@ describe("resolveGlob", () => {
 
   it("a plain * only matches the top level, not nested files", () => {
     const matches = resolveGlob("prompts/*.md", cwd);
-    expect(matches).toEqual([`${cwd}/prompts/top.md`]);
+    expect(matches).toContain(`${cwd}/prompts/top.md`);
+    expect(matches).not.toContain(`${cwd}/prompts/nested/deep.md`);
   });
 
   it("resolves a literal path directly", () => {

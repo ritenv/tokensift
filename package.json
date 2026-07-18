@@ -28,6 +28,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "tokensift": "./dist/cli.js"
+  },
   "files": ["dist"],
   "dependencies": {
     "gpt-tokenizer": "^3.4.0"
