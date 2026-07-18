@@ -29,6 +29,10 @@ export interface AnalyzeOptions {
   budget?: number;
 }
 
+export interface ApplyFixesOptions {
+  ruleIds?: string[];
+}
+
 export interface Report {
   summary: {
     totalTokens: number;
@@ -38,6 +42,8 @@ export interface Report {
   };
   findings: Finding[];
   byRule: Record<string, Finding[]>;
+  /** returns the input with autofixable findings applied; pure, never writes anything */
+  applyFixes(options?: ApplyFixesOptions): string;
 }
 
 interface Normalized {
@@ -109,6 +115,23 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
   );
   const totalWasteTokens = findings.reduce((sum, f) => sum + f.tokens.saved, 0);
 
+  function applyFixes(options: ApplyFixesOptions = {}): string {
+    const fixes = findings
+      .filter((f) => f.fix && (!options.ruleIds || options.ruleIds.includes(f.ruleId)))
+      .map((f) => f.fix!)
+      .sort((a, b) => a.range[0] - b.range[0]);
+
+    let result = "";
+    let cursor = 0;
+    for (const fix of fixes) {
+      if (fix.range[0] < cursor) continue;
+      result += text.slice(cursor, fix.range[0]) + fix.replacement;
+      cursor = fix.range[1];
+    }
+    result += text.slice(cursor);
+    return result;
+  }
+
   return {
     summary: {
       totalTokens: tokenView.count,
@@ -118,5 +141,6 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     },
     findings,
     byRule,
+    applyFixes,
   };
 }
