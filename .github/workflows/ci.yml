@@ -23,6 +23,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - run: node dist/cli.js test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o
       - run: pnpm publint
       - run: pnpm attw
 
