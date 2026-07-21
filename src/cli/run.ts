@@ -1,17 +1,16 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { relative } from "node:path";
 import { stdin } from "node:process";
 import { createLinter, defineConfig } from "../config.js";
-import type { AnalysisInput } from "../types.js";
 import { parseArgs } from "./args.js";
-import { resolveGlob } from "./glob.js";
+import { loadBaseline, resolveBaselinePath, writeBaseline } from "./baseline-store.js";
+import { runBudgetInit } from "./budget-init.js";
+import { runCheck } from "./check.js";
 import { loadConfig } from "./load-config.js";
 import { formatJson } from "./reporter-json.js";
 import { formatPretty } from "./reporter-pretty.js";
-
-export interface RunResult {
-  exitCode: number;
-  output: string;
-}
+import { resolveInputs } from "./resolve-inputs.js";
+import type { RunResult } from "./types.js";
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -19,13 +18,7 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-interface ResolvedInput {
-  file: string;
-  input: AnalysisInput;
-  writable: boolean;
-}
-
-export async function run(argv: string[], cwd: string): Promise<RunResult> {
+async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
   try {
     const options = parseArgs(argv);
     const config = loadConfig(cwd, options.config);
@@ -37,25 +30,12 @@ export async function run(argv: string[], cwd: string): Promise<RunResult> {
     const rules = options.rules ?? config?.rules;
     const autofix = options.fix || options.write ? true : (config?.autofix ?? true);
     const budget = config?.budget;
+    const baselinePath = resolveBaselinePath(cwd, options.baselineFile);
+    const baselineStore = loadBaseline(baselinePath);
 
-    const resolved: ResolvedInput[] = [];
-    if (options.stdin) {
-      resolved.push({ file: "<stdin>", input: await readStdin(), writable: false });
-    } else {
-      const files = [...new Set(options.inputs.flatMap((pattern) => resolveGlob(pattern, cwd)))];
-      if (files.length === 0) {
-        throw new Error(`no files matched: ${options.inputs.join(", ")}`);
-      }
-      for (const file of files) {
-        const isJson = file.endsWith(".json");
-        const raw = readFileSync(file, "utf8");
-        resolved.push({
-          file,
-          input: isJson ? (JSON.parse(raw) as AnalysisInput) : raw,
-          writable: !isJson,
-        });
-      }
-    }
+    const resolved = options.stdin
+      ? [{ file: "<stdin>", input: await readStdin(), writable: false }]
+      : resolveInputs(options.inputs, cwd);
 
     if (options.write) {
       const unwritable = resolved.filter((r) => !r.writable).map((r) => r.file);
@@ -67,10 +47,22 @@ export async function run(argv: string[], cwd: string): Promise<RunResult> {
     }
 
     const linter = createLinter(defineConfig({ model, rules, autofix, budget }));
-    const results = resolved.map(({ file, input }) => ({ file, report: linter.analyze(input) }));
+    const results = resolved.map(({ file, input }) => {
+      const baseline = baselineStore[relative(cwd, file)];
+      return { file, report: linter.analyze(input, { baseline }) };
+    });
 
     if (options.write) {
       for (const { file, report } of results) writeFileSync(file, report.applyFixes());
+    }
+
+    if (options.updateBaseline) {
+      const updated = { ...baselineStore };
+      for (const { file, report } of results) {
+        if (file === "<stdin>") continue;
+        updated[relative(cwd, file)] = report.summary.totalTokens;
+      }
+      writeBaseline(baselinePath, updated);
     }
 
     const output =
@@ -90,4 +82,10 @@ export async function run(argv: string[], cwd: string): Promise<RunResult> {
   } catch (err) {
     return { exitCode: 3, output: `error: ${(err as Error).message}` };
   }
+}
+
+export async function run(argv: string[], cwd: string): Promise<RunResult> {
+  if (argv[0] === "check") return runCheck(argv.slice(1), cwd);
+  if (argv[0] === "budget" && argv[1] === "init") return runBudgetInit(argv.slice(2), cwd);
+  return runAnalyze(argv, cwd);
 }

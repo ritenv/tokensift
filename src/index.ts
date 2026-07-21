@@ -6,6 +6,7 @@ export { resolveEncoder } from "./encoder.js";
 export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,
+  baselineRegression,
   budgetExceeded,
   builtinRules,
   deadInstruction,

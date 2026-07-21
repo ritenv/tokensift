@@ -3,6 +3,6 @@ dist
 *.log
 .DS_Store
 coverage
-toklint-spec.md
+spec.md
 bun.lock
 bun.lockb

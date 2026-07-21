@@ -12,12 +12,14 @@ export interface CliOptions {
   write: boolean;
   stdin: boolean;
   config?: string;
+  baselineFile?: string;
+  updateBaseline: boolean;
 }
 
 const KNOWN_RULE_IDS = new Set(builtinRules.map((r) => r.id));
 const VALID_SEVERITIES = new Set(["off", "error", "warn", "info"]);
 
-function requireValue(argv: string[], index: number, flag: string): string {
+export function requireValue(argv: string[], index: number, flag: string): string {
   const value = argv[index];
   if (value === undefined) throw new Error(`${flag} expects a value`);
   return value;
@@ -51,6 +53,8 @@ export function parseArgs(argv: string[]): CliOptions {
   let write = false;
   let stdin = false;
   let config: string | undefined;
+  let baselineFile: string | undefined;
+  let updateBaseline = false;
   let sawCommand = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -83,6 +87,12 @@ export function parseArgs(argv: string[]): CliOptions {
       case "--config":
         config = requireValue(argv, ++i, "--config");
         continue;
+      case "--baseline-file":
+        baselineFile = requireValue(argv, ++i, "--baseline-file");
+        continue;
+      case "--update-baseline":
+        updateBaseline = true;
+        continue;
       case "--fix":
         fix = true;
         continue;
@@ -109,5 +119,17 @@ export function parseArgs(argv: string[]): CliOptions {
     throw new Error("no inputs given; pass file paths/globs or --stdin");
   }
 
-  return { inputs, model, format, rules, maxWarnings, fix, write, stdin, config };
+  return {
+    inputs,
+    model,
+    format,
+    rules,
+    maxWarnings,
+    fix,
+    write,
+    stdin,
+    config,
+    baselineFile,
+    updateBaseline,
+  };
 }
