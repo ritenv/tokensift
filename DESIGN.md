@@ -68,7 +68,7 @@ Separate command, not `analyze --ci` or similar. `check` is meant to be a fixed 
 
 Needs a stable key per assertion to know which baseline belongs to which test. Jest and Vitest both pass a matcher context with `testPath` and `currentTestName` to `expect.extend` matchers (part of the interop contract Vitest deliberately kept compatible with Jest's), so the key is `${testPath} > ${currentTestName}` rather than anything this package invents. Storage and tolerance mirror the CLI's `baseline-regression`/`--update-baseline` exactly, same `TOLERANCE_PCT` constant, same "record on first run, compare after" shape, just keyed by test identity instead of file path, and stored at `.tokensift/matcher-baselines.json` instead of `.tokensift/baseline.json`.
 
-The CI guard (refuse to auto-create a baseline when `process.env.CI` is set, unless `updateBaseline` is passed) copies Jest's own behavior for new snapshots in CI. Without it, a baseline file that never gets committed would make every test pass trivially on every CI run, silently.
+No environment detection anywhere in the matcher itself, same input always produces the same result. A missing baseline always gets created and passes, whether that run happens to be on CI or not. Whether an uncommitted baseline file is a problem for a given CI setup is the user's call, not this package's to guess at.
 
 ## Provider profile
 
