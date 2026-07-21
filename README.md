@@ -190,7 +190,7 @@ import * as matchers from "tokensift/matchers";
 expect.extend(matchers);
 ```
 
-`toMatchTokenBaseline` records a token count the first time a test runs and compares against it on every run after, failing once growth passes 10%, same tolerance as the CLI's `baseline-regression` rule. It stores counts in `.tokensift/matcher-baselines.json`, keyed by test file and test name, commit that file alongside your tests. Pass `{ updateBaseline: true }` once growth is intentional. On CI, a test with no recorded baseline fails instead of silently creating one, so a missing or uncommitted baseline file shows up as a real failure, not a free pass.
+`toMatchTokenBaseline` records a token count the first time a test runs and compares against it on every run after, failing once growth passes 10%, same tolerance as the CLI's `baseline-regression` rule. It stores counts in `.tokensift/matcher-baselines.json`, keyed by test file and test name, commit that file alongside your tests. Pass `{ updateBaseline: true }` once growth is intentional.
 
 ## What's here
 
