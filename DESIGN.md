@@ -64,6 +64,12 @@ The rule itself only knows a plain number: `ctx.baseline`, the previously record
 
 Separate command, not `analyze --ci` or similar. `check` is meant to be a fixed CI gate: no `--fix`, `--write`, `--max-warnings`, or rule overrides, just exit 0 or 2. Keeping it a distinct entry point means it can't accidentally grow those flags later. It reads per-file budgets and baselines from `.tokensift/budgets.json` / `.tokensift/baseline.json` instead of `analyze`'s single global `Config.budget`, so `createLinter().analyze()` takes `budget` as a per-call override too now, same as `baseline` already did.
 
+## toMatchTokenBaseline and test identity
+
+Needs a stable key per assertion to know which baseline belongs to which test. Jest and Vitest both pass a matcher context with `testPath` and `currentTestName` to `expect.extend` matchers (part of the interop contract Vitest deliberately kept compatible with Jest's), so the key is `${testPath} > ${currentTestName}` rather than anything this package invents. Storage and tolerance mirror the CLI's `baseline-regression`/`--update-baseline` exactly, same `TOLERANCE_PCT` constant, same "record on first run, compare after" shape, just keyed by test identity instead of file path, and stored at `.tokensift/matcher-baselines.json` instead of `.tokensift/baseline.json`.
+
+The CI guard (refuse to auto-create a baseline when `process.env.CI` is set, unless `updateBaseline` is passed) copies Jest's own behavior for new snapshots in CI. Without it, a baseline file that never gets committed would make every test pass trivially on every CI run, silently.
+
 ## Provider profile
 
 `AnalysisContext.providerProfile` has a typed shape (message overhead, cache minimums) but nothing populates it yet. Filling it with unverified numbers would be worse than leaving it empty.
