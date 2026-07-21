@@ -19,7 +19,7 @@ export interface CliOptions {
 const KNOWN_RULE_IDS = new Set(builtinRules.map((r) => r.id));
 const VALID_SEVERITIES = new Set(["off", "error", "warn", "info"]);
 
-function requireValue(argv: string[], index: number, flag: string): string {
+export function requireValue(argv: string[], index: number, flag: string): string {
   const value = argv[index];
   if (value === undefined) throw new Error(`${flag} expects a value`);
   return value;

@@ -35,12 +35,12 @@ function selectRules(rules: Rule[], overrides: Config["rules"]): Rule[] {
 export function createLinter(config: Config) {
   const rules = selectRules(builtinRules, config.rules);
   return {
-    analyze: (input: AnalysisInput, overrides?: { baseline?: number }) =>
+    analyze: (input: AnalysisInput, overrides?: { baseline?: number; budget?: number }) =>
       analyze(input, {
         model: config.model,
         rules,
         autofix: config.autofix,
-        budget: config.budget,
+        budget: overrides?.budget ?? config.budget,
         baseline: overrides?.baseline,
       }),
   };
