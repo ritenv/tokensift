@@ -23,11 +23,26 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./matchers": {
+      "import": {
+        "types": "./dist/matchers.d.ts",
+        "default": "./dist/matchers.js"
+      },
+      "require": {
+        "types": "./dist/matchers.d.cts",
+        "default": "./dist/matchers.cjs"
+      }
     }
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "matchers": ["./dist/matchers.d.ts"]
+    }
+  },
   "bin": {
     "tokensift": "./dist/cli.js"
   },

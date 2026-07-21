@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, and a CLI with pretty and json output. Most reporters and CLI commands beyond `analyze` don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, a CLI with `analyze`/`check`/`budget init`, and `tokensift/matchers` for vitest/jest. Most reporters and CLI commands beyond those three don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -170,6 +170,28 @@ Drop a `tokensift.config.json` next to where you run the command, and stop repea
 
 CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` config loading yet.
 
+## Test matchers
+
+`tokensift/matchers` works with vitest or jest, since it doesn't import either, it just extends the global `expect` if one's already registered:
+
+```ts
+import "tokensift/matchers";
+
+expect(prompt).toBeUnderTokens(2000, { model: "gpt-4o" });
+expect(payload).toHaveNoTokensiftErrors({ model: "gpt-4o" });
+expect(prompt).toMatchTokenBaseline({ model: "gpt-4o" });
+```
+
+That auto-registration needs a global `expect`, which jest has by default and vitest only has with `test.globals: true`. Without globals, extend it yourself:
+
+```ts
+import { expect } from "vitest";
+import * as matchers from "tokensift/matchers";
+expect.extend(matchers);
+```
+
+`toMatchTokenBaseline` records a token count the first time a test runs and compares against it on every run after, failing once growth passes 10%, same tolerance as the CLI's `baseline-regression` rule. It stores counts in `.tokensift/matcher-baselines.json`, keyed by test file and test name, commit that file alongside your tests. Pass `{ updateBaseline: true }` once growth is intentional. On CI, a test with no recorded baseline fails instead of silently creating one, so a missing or uncommitted baseline file shows up as a real failure, not a free pass.
+
 ## What's here
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
@@ -179,6 +201,7 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 - A recorded baseline (`baseline-regression`), off by default until you record one.
 - `t` / `dyn` for template-aware analysis.
 - A `tokensift` CLI: `analyze`, `check`, `budget init` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
+- `tokensift/matchers`: `toBeUnderTokens`, `toHaveNoTokensiftErrors`, `toMatchTokenBaseline` for vitest/jest.
 
 ## Rules
 
@@ -211,7 +234,7 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 - The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.
 - `diff`, `extract`, `xray`, `pricing`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too (the library function, distinct from the `budget init` CLI command above).
 - `.js`/`.ts` config file loading, only `.json` works right now.
-- `tokensift/matchers`, `tokensift/mcp`, `tokensift/action`.
+- `tokensift/mcp`, `tokensift/action`.
 
 ## Non-goals
 

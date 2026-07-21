@@ -1,6 +1,6 @@
 import { defineRule } from "../rule.js";
 
-const TOLERANCE_PCT = 10;
+export const TOLERANCE_PCT = 10;
 
 const WHY =
   "a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression, not a deliberate change";
