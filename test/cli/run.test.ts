@@ -92,4 +92,33 @@ describe("run", () => {
     expect(result.exitCode).toBe(3);
     expect(result.output).toContain("no files matched");
   });
+
+  it("--update-baseline records current token counts, no regression on the first run", async () => {
+    scratchDir = mkdtempSync(join(tmpdir(), "tokensift-cli-"));
+    const file = join(scratchDir, "prompt.md");
+    writeFileSync(file, "a short static prompt with no findings");
+
+    const result = await run([file, "--model", "gpt-4o", "--update-baseline"], scratchDir);
+    expect(result.exitCode).toBe(0);
+
+    const baseline = JSON.parse(
+      readFileSync(join(scratchDir, ".tokensift", "baseline.json"), "utf8"),
+    );
+    expect(baseline["prompt.md"]).toBeGreaterThan(0);
+  });
+
+  it("flags baseline-regression once a file grows past a recorded baseline", async () => {
+    scratchDir = mkdtempSync(join(tmpdir(), "tokensift-cli-"));
+    const file = join(scratchDir, "prompt.md");
+    writeFileSync(file, "a short static prompt");
+    await run([file, "--model", "gpt-4o", "--update-baseline"], scratchDir);
+
+    writeFileSync(
+      file,
+      "a short static prompt that has grown a great deal longer than it used to be, with plenty of extra words piled on",
+    );
+    const result = await run([file, "--model", "gpt-4o"], scratchDir);
+    expect(result.exitCode).toBe(2);
+    expect(result.output).toContain("baseline-regression");
+  });
 });

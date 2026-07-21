@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, seventeen rules, and a CLI with pretty and json output. Most reporters and CLI commands beyond `analyze` don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, and a CLI with pretty and json output. Most reporters and CLI commands beyond `analyze` don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -136,6 +136,16 @@ tokensift ticket.md --model gpt-4o --format json
 
 Other flags: `--rules uuid-bloat=off,filler=error`, `--max-warnings n`, `--config <path>`. Exit codes: `0` clean, `1` warnings past `--max-warnings`, `2` any error-severity finding, `3` bad input, bad flags, or a bad config file.
 
+### Baseline regression
+
+Record how many tokens a file costs today, then get flagged when it drifts too far from that:
+
+```
+tokensift prompts/*.md --model gpt-4o --update-baseline
+```
+
+That writes `.tokensift/baseline.json` (one entry per file, keyed by path relative to where you ran the command). Commit it. Run `tokensift` again later without `--update-baseline` and `baseline-regression` fires if a file has grown more than 10% past its recorded count. Re-run with `--update-baseline` once the growth is intentional. `--baseline-file <path>` points at a different file instead of the `.tokensift/baseline.json` default.
+
 ### Config file
 
 Drop a `tokensift.config.json` next to where you run the command, and stop repeating `--model` on every call:
@@ -153,10 +163,11 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
-- Seventeen rules, see the table below.
+- Eighteen rules, see the table below.
 - A declared token budget (`budget-exceeded`), off by default until you set one.
+- A recorded baseline (`baseline-regression`), off by default until you record one.
 - `t` / `dyn` for template-aware analysis.
-- A `tokensift` CLI: `analyze` command, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file.
+- A `tokensift` CLI: `analyze` command, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, `--update-baseline`.
 
 ## Rules
 
@@ -179,11 +190,12 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 | `dead-instruction` | info | no | an instruction pointing at a structure that isn't actually there ("as shown above") wastes tokens and confuses the model | remove the dangling reference or add what it points to |
 | `unlabeled-dynamic` | info | no | a large JSON region not wrapped in dyn() gets counted as static cost when it's really per-request data | wrap it with dyn() |
 | `budget-exceeded` | error | no | a declared token budget exists to keep cost and latency predictable, this input broke it | trim static content or tighten dyn() slot samples |
+| `baseline-regression` | error | no | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
 
 ## What's not here yet
 
 - Anthropic and Gemini encoders. They throw a clear error rather than a guessed count.
-- The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D), plus `baseline-regression`. Both need either provider profile data or on-disk state this package doesn't have yet.
+- The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet.
 - Pricing data, `--volume`, and cost fields on findings.
 - The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.
 - `diff`, `budget`/`check`, `extract`, `xray`, `pricing`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too.

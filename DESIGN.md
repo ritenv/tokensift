@@ -54,6 +54,12 @@ Only fires on JSON regions, not "anything that looks dynamic." A generic version
 
 `Report.applyFixes()` splices fixes into `AnalysisContext.text`, which is the joined string `analyze()` builds internally. For plain-string input that's just the original text, so fixes land exactly where they should. For `Message[]`/`Payload` input it's a reconstruction (messages joined with `"\n"`), not the original file bytes, so a fix range doesn't map back to a real position in a JSON source file. Doing that properly needs a JSON parser that tracks source offsets per value through JSON's string escaping, plus a way to re-serialize without reformatting the whole file over one fix. Real feature, not attempted here. The CLI's `--write` refuses JSON input outright instead of guessing.
 
+## baseline-regression and where the baseline lives
+
+The rule itself only knows a plain number: `ctx.baseline`, the previously recorded token count, compared against a fixed 10% tolerance. It doesn't know about files or JSON on disk, same split as `budget-exceeded`. The CLI owns the actual state: `.tokensift/baseline.json` maps file path (relative to cwd) to token count, written by `--update-baseline` and read on every run after. `createLinter().analyze()` takes an optional per-call `{ baseline }` override so the CLI can look up a different baseline per file without building a new linter each time.
+
+10% is a constant in the rule file, not a config option. Same reasoning as the other fixed thresholds: one more number nobody would tune correctly without real data on what "normal" drift looks like.
+
 ## Provider profile
 
 `AnalysisContext.providerProfile` has a typed shape (message overhead, cache minimums) but nothing populates it yet. Filling it with unverified numbers would be worse than leaving it empty.

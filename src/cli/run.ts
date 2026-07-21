@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { relative } from "node:path";
 import { stdin } from "node:process";
 import { createLinter, defineConfig } from "../config.js";
 import type { AnalysisInput } from "../types.js";
 import { parseArgs } from "./args.js";
+import { loadBaseline, resolveBaselinePath, writeBaseline } from "./baseline-store.js";
 import { resolveGlob } from "./glob.js";
 import { loadConfig } from "./load-config.js";
 import { formatJson } from "./reporter-json.js";
@@ -37,6 +39,8 @@ export async function run(argv: string[], cwd: string): Promise<RunResult> {
     const rules = options.rules ?? config?.rules;
     const autofix = options.fix || options.write ? true : (config?.autofix ?? true);
     const budget = config?.budget;
+    const baselinePath = resolveBaselinePath(cwd, options.baselineFile);
+    const baselineStore = loadBaseline(baselinePath);
 
     const resolved: ResolvedInput[] = [];
     if (options.stdin) {
@@ -67,10 +71,22 @@ export async function run(argv: string[], cwd: string): Promise<RunResult> {
     }
 
     const linter = createLinter(defineConfig({ model, rules, autofix, budget }));
-    const results = resolved.map(({ file, input }) => ({ file, report: linter.analyze(input) }));
+    const results = resolved.map(({ file, input }) => {
+      const baseline = baselineStore[relative(cwd, file)];
+      return { file, report: linter.analyze(input, { baseline }) };
+    });
 
     if (options.write) {
       for (const { file, report } of results) writeFileSync(file, report.applyFixes());
+    }
+
+    if (options.updateBaseline) {
+      const updated = { ...baselineStore };
+      for (const { file, report } of results) {
+        if (file === "<stdin>") continue;
+        updated[relative(cwd, file)] = report.summary.totalTokens;
+      }
+      writeBaseline(baselinePath, updated);
     }
 
     const output =
