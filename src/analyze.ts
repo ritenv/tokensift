@@ -27,6 +27,8 @@ export interface AnalyzeOptions {
   autofix?: boolean;
   /** declared total token budget, used by the budget-exceeded rule */
   budget?: number;
+  /** previously recorded token count, used by the baseline-regression rule */
+  baseline?: number;
 }
 
 export interface ApplyFixesOptions {
@@ -99,6 +101,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     indentMap: text.split("\n").map((line) => line.length - line.trimStart().length),
     autofix: options.autofix ?? true,
     budget: options.budget,
+    baseline: options.baseline,
   };
 
   const findings: Finding[] = [];

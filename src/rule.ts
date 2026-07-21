@@ -24,6 +24,8 @@ export interface AnalysisContext {
   autofix: boolean;
   /** declared total token budget for budget-exceeded; undefined means no budget configured */
   budget?: number;
+  /** previously recorded token count for baseline-regression; undefined means no baseline recorded */
+  baseline?: number;
 }
 
 export interface Rule {
