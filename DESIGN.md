@@ -60,6 +60,10 @@ The rule itself only knows a plain number: `ctx.baseline`, the previously record
 
 10% is a constant in the rule file, not a config option. Same reasoning as the other fixed thresholds: one more number nobody would tune correctly without real data on what "normal" drift looks like.
 
+## check vs analyze
+
+Separate command, not `analyze --ci` or similar. `check` is meant to be a fixed CI gate: no `--fix`, `--write`, `--max-warnings`, or rule overrides, just exit 0 or 2. Keeping it a distinct entry point means it can't accidentally grow those flags later. It reads per-file budgets and baselines from `.tokensift/budgets.json` / `.tokensift/baseline.json` instead of `analyze`'s single global `Config.budget`, so `createLinter().analyze()` takes `budget` as a per-call override too now, same as `baseline` already did.
+
 ## Provider profile
 
 `AnalysisContext.providerProfile` has a typed shape (message overhead, cache minimums) but nothing populates it yet. Filling it with unverified numbers would be worse than leaving it empty.

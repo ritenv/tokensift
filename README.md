@@ -146,6 +146,17 @@ tokensift prompts/*.md --model gpt-4o --update-baseline
 
 That writes `.tokensift/baseline.json` (one entry per file, keyed by path relative to where you ran the command). Commit it. Run `tokensift` again later without `--update-baseline` and `baseline-regression` fires if a file has grown more than 10% past its recorded count. Re-run with `--update-baseline` once the growth is intentional. `--baseline-file <path>` points at a different file instead of the `.tokensift/baseline.json` default.
 
+### `check` and `budget init`
+
+The CI entry point. `budget init` records a hard per-file token ceiling, `check` runs everything and fails on any error-severity finding, whether that's `budget-exceeded`, `baseline-regression`, or any other rule, `base64-blob` included:
+
+```
+tokensift budget init prompts/*.md --model gpt-4o
+tokensift check prompts/*.md --model gpt-4o
+```
+
+`budget init` writes `.tokensift/budgets.json`, same shape and same `--budget-file` override as the baseline store. `check` reads both `.tokensift/budgets.json` and `.tokensift/baseline.json` automatically if they exist and applies them per file. Unlike `analyze`, `check` has no `--fix`, `--write`, or `--max-warnings`, it's meant to be the one deterministic gate CI runs: exit `0` or exit `2`, nothing in between. `--format json` works the same as it does on `analyze`.
+
 ### Config file
 
 Drop a `tokensift.config.json` next to where you run the command, and stop repeating `--model` on every call:
@@ -167,7 +178,7 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 - A declared token budget (`budget-exceeded`), off by default until you set one.
 - A recorded baseline (`baseline-regression`), off by default until you record one.
 - `t` / `dyn` for template-aware analysis.
-- A `tokensift` CLI: `analyze` command, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, `--update-baseline`.
+- A `tokensift` CLI: `analyze`, `check`, `budget init` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
 
 ## Rules
 
@@ -198,7 +209,7 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 - The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet.
 - Pricing data, `--volume`, and cost fields on findings.
 - The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.
-- `diff`, `budget`/`check`, `extract`, `xray`, `pricing`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too.
+- `diff`, `extract`, `xray`, `pricing`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too (the library function, distinct from the `budget init` CLI command above).
 - `.js`/`.ts` config file loading, only `.json` works right now.
 - `tokensift/matchers`, `tokensift/mcp`, `tokensift/action`.
 
