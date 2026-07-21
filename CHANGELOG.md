@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.6.0
+
+### Minor Changes
+
+- 9b55709: Adds budget and check cli commands, and regression rule
+
 ## 0.5.0
 
 ### Minor Changes
