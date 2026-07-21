@@ -24,6 +24,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: node dist/cli.js test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o
+      - run: node dist/cli.js budget init test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o --budget-file /tmp/ci-budgets.json
+      - run: node dist/cli.js check test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o --budget-file /tmp/ci-budgets.json
       - run: pnpm publint
       - run: pnpm attw
 
