@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.7.0
+
+### Minor Changes
+
+- fc14847: Add matchers for testing
+
 ## 0.6.0
 
 ### Minor Changes
