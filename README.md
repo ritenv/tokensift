@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, a CLI with `analyze`/`check`/`budget init`/`calibrate`, and `tokensift/matchers` for vitest/jest. OpenAI models are exact. Claude models have a real estimate encoder and a `calibrate` command, but no calibration data ships yet, see below. Most reporters and CLI commands beyond those don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, a CLI with `analyze`/`check`/`budget init`/`calibrate`, and `tokensift/matchers` for vitest/jest. OpenAI models are exact. Claude models (`claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`) have a real estimate encoder with bundled calibration data, measured mean error ~7.6%; other Claude model ids throw until calibrated, see below. Most reporters and CLI commands beyond those don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -159,7 +159,7 @@ tokensift check prompts/*.md --model gpt-4o
 
 ### `calibrate`
 
-There's a real Anthropic estimate encoder, but **no calibration data ships yet**: `--model claude-*` currently throws `no calibration data for '<model>'`, naming the `calibrate` command as the way to add one. Once calibration data exists for a model (bundled or local), findings on it carry `confidence: "estimate"`, same honesty rule as the rest of this package: there's no public BPE table to be exact against, only an estimate with a measured error, never presented as exact.
+There's a real Anthropic estimate encoder, with bundled calibration data for the current-generation models: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` (measured mean absolute error ~7.6%, against a 28-sample dedicated fixture corpus, real calls to Anthropic's token-counting endpoint). Any other `claude-*` id throws `no calibration data for '<model>'`, naming the `calibrate` command as the way to add one. Findings on a calibrated model carry `confidence: "estimate"`, same honesty rule as the rest of this package: there's no public BPE table to be exact against, only an estimate with a measured error, never presented as exact.
 
 Run your own calibration against your own Anthropic key and your own prompts:
 
@@ -210,7 +210,7 @@ expect.extend(matchers);
 ## What's here
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
-- A real estimate encoder for Anthropic models, character-class-based, calibrated via `tokensift calibrate anthropic run` against Anthropic's own token-counting endpoint. No calibration data ships bundled yet, `--model claude-*` throws until you (or the maintainer, in a later release) run it.
+- A real estimate encoder for Anthropic models, character-class-based, calibrated via `tokensift calibrate anthropic run` against Anthropic's own token-counting endpoint. Bundled calibration data ships for `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` (~7.6% mean error); other `claude-*` ids throw until you calibrate them yourself.
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
 - Eighteen rules, see the table below.
 - A declared token budget (`budget-exceeded`), off by default until you set one.
@@ -244,7 +244,7 @@ expect.extend(matchers);
 
 ## What's not here yet
 
-- Gemini encoders. They throw a clear error rather than a guessed count. Anthropic has a real encoder but no bundled calibration data yet, same throw-rather-than-guess policy applies until that lands.
+- Gemini encoders. They throw a clear error rather than a guessed count. Anthropic has a real encoder with bundled calibration for the current-generation models only; other Claude ids throw until calibrated, same throw-rather-than-guess policy.
 - The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet.
 - Pricing data, `--volume`, and cost fields on findings.
 - The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.

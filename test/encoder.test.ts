@@ -16,6 +16,13 @@ describe("resolveEncoder", () => {
     expect(() => resolveEncoder("claude-not-a-real-one")).toThrow(/no calibration data/);
   });
 
+  it("gives a real estimate encoder for a calibrated claude model", () => {
+    const encoder = resolveEncoder("claude-sonnet-4-5");
+    expect(encoder.mode).toBe("estimate");
+    expect(encoder.family).toBe("anthropic");
+    expect(encoder.countTokens("hello world")).toBeGreaterThan(0);
+  });
+
   it("throws for gemini, which isn't wired up at all", () => {
     expect(() => resolveEncoder("gemini-1.5-pro").countTokens("hi")).toThrow(/not implemented/);
   });
