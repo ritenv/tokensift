@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.8.0
+
+### Minor Changes
+
+- 2a75db8: Adds support for anthropic token estimation via calibrated token counts
+
 ## 0.7.0
 
 ### Minor Changes
