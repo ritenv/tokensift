@@ -3,6 +3,9 @@ export type { AnalyzeOptions, Report, TokenizeOptions } from "./analyze.js";
 export { createLinter, defineConfig } from "./config.js";
 export type { Config, VolumeConfig } from "./config.js";
 export { resolveEncoder } from "./encoder.js";
+export type { Encoder, EncoderMode } from "./encoder.js";
+export { AnthropicEncoder } from "./encoders/anthropic.js";
+export type { AnthropicCalibration } from "./encoders/anthropic.js";
 export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,

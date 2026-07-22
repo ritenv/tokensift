@@ -1,4 +1,5 @@
 import { analyze } from "./analyze.js";
+import type { Encoder } from "./encoder.js";
 import type { Rule } from "./rule.js";
 import { builtinRules } from "./rules/index.js";
 import type { AnalysisInput, Severity } from "./types.js";
@@ -35,13 +36,17 @@ function selectRules(rules: Rule[], overrides: Config["rules"]): Rule[] {
 export function createLinter(config: Config) {
   const rules = selectRules(builtinRules, config.rules);
   return {
-    analyze: (input: AnalysisInput, overrides?: { baseline?: number; budget?: number }) =>
+    analyze: (
+      input: AnalysisInput,
+      overrides?: { baseline?: number; budget?: number; encoder?: Encoder },
+    ) =>
       analyze(input, {
         model: config.model,
         rules,
         autofix: config.autofix,
         budget: overrides?.budget ?? config.budget,
         baseline: overrides?.baseline,
+        encoder: overrides?.encoder,
       }),
   };
 }

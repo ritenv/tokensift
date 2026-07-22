@@ -1,3 +1,4 @@
+import type { Encoder } from "./encoder.js";
 import { resolveEncoder } from "./encoder.js";
 import type { AnalysisContext, Rule } from "./rule.js";
 import { findJsonRegions } from "./services/json-regions.js";
@@ -29,6 +30,8 @@ export interface AnalyzeOptions {
   budget?: number;
   /** previously recorded token count, used by the baseline-regression rule */
   baseline?: number;
+  /** bypasses resolveEncoder(model) with a specific Encoder instance, e.g. a locally-calibrated one */
+  encoder?: Encoder;
 }
 
 export interface ApplyFixesOptions {
@@ -86,7 +89,7 @@ function normalize(input: AnalysisInput): Normalized {
 
 export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
   const { text, inputRef, messages, slots } = normalize(input);
-  const encoder = resolveEncoder(options.model);
+  const encoder = options.encoder ?? resolveEncoder(options.model);
   const tokenView = encoder.tokenize(text);
 
   const ctx: AnalysisContext = {
