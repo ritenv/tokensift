@@ -12,8 +12,12 @@ describe("resolveEncoder", () => {
     expect(resolveEncoder("gpt-4").family).toBe("cl100k_base");
   });
 
-  it("throws a clear error for models that aren't wired up yet", () => {
-    expect(() => resolveEncoder("claude-sonnet-4-6").countTokens("hi")).toThrow(/not implemented/);
+  it("throws a clear error for a claude model with no calibration data", () => {
+    expect(() => resolveEncoder("claude-not-a-real-one")).toThrow(/no calibration data/);
+  });
+
+  it("throws for gemini, which isn't wired up at all", () => {
+    expect(() => resolveEncoder("gemini-1.5-pro").countTokens("hi")).toThrow(/not implemented/);
   });
 
   it("throws for a model it's never heard of", () => {

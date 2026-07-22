@@ -1,0 +1,33 @@
+{
+  "_readme": "Maintainer-only calibration corpus for the bundled Anthropic encoder (see spec.md and DESIGN.md). Not the same file as the template `tokensift calibrate anthropic init` writes for end users. Curated mix of prose, code, data, and identifier-heavy text so every TokenClass bucket gets real signal.",
+  "samples": [
+    { "text": "Summarize the following support ticket in one sentence, focusing on the customer's core complaint." },
+    { "text": "You are a helpful assistant that classifies customer feedback into billing, technical, or account categories. Respond with only the category name." },
+    { "text": "Please review the attached error log and identify the most likely root cause of the timeout, then suggest a fix." },
+    { "text": "Explain the difference between a stack and a queue in plain English, with a short real-world analogy for each." },
+    { "text": "Translate the following paragraph from English to French, keeping the tone formal and preserving all proper nouns." },
+    { "text": "What are the main tradeoffs between microservices and a monolithic architecture for a small team of five engineers?" },
+    { "text": "Write a haiku about autumn leaves falling in a quiet forest, using traditional 5-7-5 syllable structure." },
+    { "text": "The patient reported mild headaches and fatigue over the past two weeks, with no history of migraines." },
+    { "text": "Compare and contrast REST and GraphQL for a public API serving both mobile and web clients." },
+    { "text": "Given a list of integers, return the two numbers that sum to a target value, and explain your approach before writing code." },
+    { "text": "The quarterly report shows a 12% increase in revenue compared to last year, driven mostly by enterprise contracts renewed in Q3." },
+    { "text": "The meeting has been rescheduled to Thursday at 3pm in conference room B, please update your calendar accordingly." },
+    { "text": "function add(a, b) {\n  return a + b;\n}\n\nfunction multiply(a, b) {\n  return a * b;\n}" },
+    { "text": "const user = { id: 42, name: 'Ada Lovelace', roles: ['admin', 'editor'], active: true };" },
+    { "text": "import { useState, useEffect } from 'react';\n\nfunction useDebounce(value, delay) {\n  const [debounced, setDebounced] = useState(value);\n  useEffect(() => {\n    const timer = setTimeout(() => setDebounced(value), delay);\n    return () => clearTimeout(timer);\n  }, [value, delay]);\n  return debounced;\n}" },
+    { "text": "class Animal:\n    def __init__(self, name, species):\n        self.name = name\n        self.species = species\n\n    def speak(self):\n        raise NotImplementedError" },
+    { "text": "SELECT id, name, created_at FROM users WHERE active = true AND created_at > '2025-01-01' ORDER BY created_at DESC LIMIT 50;" },
+    { "text": "curl -X POST https://api.example.com/v1/orders -H 'Content-Type: application/json' -H 'Authorization: Bearer sk_live_abc123' -d '{\"item\":\"widget\",\"qty\":3}'" },
+    { "text": "git commit -m 'fix: handle null pointer in payment processor when webhook payload is malformed'" },
+    { "text": "docker run -d -p 8080:80 --name web --restart unless-stopped nginx:latest" },
+    { "text": "{\n  \"id\": 8421,\n  \"status\": \"completed\",\n  \"items\": [\n    { \"sku\": \"A100\", \"qty\": 2, \"price\": 19.99 },\n    { \"sku\": \"B204\", \"qty\": 1, \"price\": 44.50 }\n  ],\n  \"total\": 84.48\n}" },
+    { "text": "trace_id: 550e8400-e29b-41d4-a716-446655440000, span_id: 6ba7b810-9dad-11d1-80b4-00c04fd430c8, status: failed, retries: 3" },
+    { "text": "error: connection refused at 127.0.0.1:5432, retrying in 5 seconds. attempt 2 of 5. last success: 2026-01-14T09:32:07Z" },
+    { "text": "commit hash: 4f2a9c1e8b7d3f0a6c5e2b1d9f8a7c6e5d4b3a2c, parent: deadbeefcafebabe0123456789abcdef01234567" },
+    { "text": "The order total came to $1,284.50 after applying a 15% discount and $42.10 in shipping, taxed at 8.25%." },
+    { "text": "Given the following stack trace, identify which function call is most likely responsible for the memory leak, and explain your reasoning step by step before proposing a fix." },
+    { "text": "Rewrite this sentence in a more concise way: 'I was wondering if it would be possible for you to perhaps take a look at this issue whenever you might have a moment.'" },
+    { "text": "As shown in the schema above, each event has a timestamp, a user_id, and an event_type field; write a query that counts distinct users per event_type per day." }
+  ]
+}

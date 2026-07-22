@@ -4,7 +4,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, a CLI with `analyze`/`check`/`budget init`, and `tokensift/matchers` for vitest/jest. Most reporters and CLI commands beyond those three don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, a CLI with `analyze`/`check`/`budget init`/`calibrate`, and `tokensift/matchers` for vitest/jest. OpenAI models are exact. Claude models have a real estimate encoder and a `calibrate` command, but no calibration data ships yet, see below. Most reporters and CLI commands beyond those don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Install
 
@@ -157,6 +157,21 @@ tokensift check prompts/*.md --model gpt-4o
 
 `budget init` writes `.tokensift/budgets.json`, same shape and same `--budget-file` override as the baseline store. `check` reads both `.tokensift/budgets.json` and `.tokensift/baseline.json` automatically if they exist and applies them per file. Unlike `analyze`, `check` has no `--fix`, `--write`, or `--max-warnings`, it's meant to be the one deterministic gate CI runs: exit `0` or exit `2`, nothing in between. `--format json` works the same as it does on `analyze`.
 
+### `calibrate`
+
+There's a real Anthropic estimate encoder, but **no calibration data ships yet**: `--model claude-*` currently throws `no calibration data for '<model>'`, naming the `calibrate` command as the way to add one. Once calibration data exists for a model (bundled or local), findings on it carry `confidence: "estimate"`, same honesty rule as the rest of this package: there's no public BPE table to be exact against, only an estimate with a measured error, never presented as exact.
+
+Run your own calibration against your own Anthropic key and your own prompts:
+
+```
+tokensift calibrate anthropic init
+# edit .tokensift/anthropic-fixtures.json: replace the 20 placeholder samples
+# with real prompts or code representative of what you actually send
+tokensift calibrate anthropic run --model claude-sonnet-4-5
+```
+
+`init` refuses to overwrite an existing fixtures file unless you pass `--force`. `run` needs `ANTHROPIC_API_KEY` set (or `--api-key-env <name>` for a different variable) and at least 20 real samples, it calls Anthropic's token-counting endpoint once per sample and writes the fitted result to `.tokensift/anthropic-calibration.json` (`--out <path>` for somewhere else). This is the only network call anywhere in this package, and it only happens when you run this command, never during `analyze`/`check`. `analyze`/`check` pick up a local calibration file automatically for any model it has an entry for (`--calibration-file <path>` to point elsewhere), falling back to the bundled default otherwise.
+
 ### Config file
 
 Drop a `tokensift.config.json` next to where you run the command, and stop repeating `--model` on every call:
@@ -195,12 +210,13 @@ expect.extend(matchers);
 ## What's here
 
 - Exact token counts for OpenAI models (o200k_base, cl100k_base).
+- A real estimate encoder for Anthropic models, character-class-based, calibrated via `tokensift calibrate anthropic run` against Anthropic's own token-counting endpoint. No calibration data ships bundled yet, `--model claude-*` throws until you (or the maintainer, in a later release) run it.
 - `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
 - Eighteen rules, see the table below.
 - A declared token budget (`budget-exceeded`), off by default until you set one.
 - A recorded baseline (`baseline-regression`), off by default until you record one.
 - `t` / `dyn` for template-aware analysis.
-- A `tokensift` CLI: `analyze`, `check`, `budget init` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
+- A `tokensift` CLI: `analyze`, `check`, `budget init`, `calibrate anthropic` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
 - `tokensift/matchers`: `toBeUnderTokens`, `toHaveNoTokensiftErrors`, `toMatchTokenBaseline` for vitest/jest.
 
 ## Rules
@@ -228,7 +244,7 @@ expect.extend(matchers);
 
 ## What's not here yet
 
-- Anthropic and Gemini encoders. They throw a clear error rather than a guessed count.
+- Gemini encoders. They throw a clear error rather than a guessed count. Anthropic has a real encoder but no bundled calibration data yet, same throw-rather-than-guess policy applies until that lands.
 - The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet.
 - Pricing data, `--volume`, and cost fields on findings.
 - The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.

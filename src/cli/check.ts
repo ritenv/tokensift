@@ -3,6 +3,7 @@ import { createLinter, defineConfig } from "../config.js";
 import { requireValue } from "./args.js";
 import { loadBaseline, resolveBaselinePath } from "./baseline-store.js";
 import { loadBudget, resolveBudgetPath } from "./budget-store.js";
+import { resolveAnthropicOverride } from "./calibration-override.js";
 import { loadConfig } from "./load-config.js";
 import { formatJson } from "./reporter-json.js";
 import { formatPretty } from "./reporter-pretty.js";
@@ -16,6 +17,7 @@ interface CheckOptions {
   config?: string;
   budgetFile?: string;
   baselineFile?: string;
+  calibrationFile?: string;
 }
 
 function parseCheckArgs(argv: string[]): CheckOptions {
@@ -25,6 +27,7 @@ function parseCheckArgs(argv: string[]): CheckOptions {
   let config: string | undefined;
   let budgetFile: string | undefined;
   let baselineFile: string | undefined;
+  let calibrationFile: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
@@ -49,6 +52,9 @@ function parseCheckArgs(argv: string[]): CheckOptions {
       case "--baseline-file":
         baselineFile = requireValue(argv, ++i, "--baseline-file");
         continue;
+      case "--calibration-file":
+        calibrationFile = requireValue(argv, ++i, "--calibration-file");
+        continue;
       default:
         if (arg.startsWith("--")) throw new Error(`unknown flag '${arg}'`);
         inputs.push(arg);
@@ -59,7 +65,7 @@ function parseCheckArgs(argv: string[]): CheckOptions {
     throw new Error("no inputs given; pass file paths or globs to check");
   }
 
-  return { inputs, model, format, config, budgetFile, baselineFile };
+  return { inputs, model, format, config, budgetFile, baselineFile, calibrationFile };
 }
 
 export async function runCheck(argv: string[], cwd: string): Promise<RunResult> {
@@ -77,11 +83,16 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
     const resolved = resolveInputs(options.inputs, cwd);
 
     const linter = createLinter(defineConfig({ model, rules: config?.rules }));
+    const encoder = resolveAnthropicOverride(model, cwd, options.calibrationFile);
     const results = resolved.map(({ file, input }) => {
       const key = relative(cwd, file);
       return {
         file,
-        report: linter.analyze(input, { budget: budgetStore[key], baseline: baselineStore[key] }),
+        report: linter.analyze(input, {
+          budget: budgetStore[key],
+          baseline: baselineStore[key],
+          encoder,
+        }),
       };
     });
 

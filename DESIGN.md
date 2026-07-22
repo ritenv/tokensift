@@ -12,7 +12,25 @@ OpenAI exact counts use gpt-tokenizer for the real o200k_base/cl100k_base BPE ra
 
 ## Estimate encoders
 
-Anthropic and Gemini encoders throw a clear "not implemented" error instead of returning a guessed count. A guess mislabeled as an estimate is worse than an explicit error.
+Gemini throws a clear "not implemented" error instead of returning a guessed count. A guess mislabeled as an estimate is worse than an explicit error.
+
+Anthropic has a real encoder now (`src/encoders/anthropic.ts`), but the same policy applies at the data layer: `resolveEncoder()` throws `no calibration data for '<model>'` for any Claude model id without a real measured calibration record, bundled or local. It does not fall back to a rough guess for an uncalibrated model. See "Anthropic estimate encoder" below for how the encoder itself works, and "calibrate anthropic" for how a calibration record gets produced.
+
+## Anthropic estimate encoder
+
+No public BPE table exists to be exact against, so this is `confidence: "estimate"` by construction, not a temporary gap. The estimator classifies raw text into the same `TokenClass` buckets the OpenAI encoder already reports (word, punct, whitespace, digit-fragment, hex-fragment, other) via character runs, not decoded tokens (there's nothing to decode), then applies one calibrated chars-per-token ratio per class.
+
+A short whitespace run (1-2 chars) gets folded into the run that follows it before estimation, rather than costing its own synthetic token. Real BPE vocabularies routinely merge a leading space into the next token (" the" is one token, not " " + "the"); without this, single-space runs between words each forced `Math.ceil(1/ratio)` up to a full token regardless of how large the ratio was, which measurably inflated every estimate. This matches what `whitespace-run`'s own note already says about short whitespace runs being "basically free" under real tokenizers, applied here to the estimator instead of a lint rule.
+
+`TokenView.tokens` for this encoder are synthetic, not real BPE ids, subdividing each class run into `ceil(run.length / ratio)` evenly-sliced sub-tokens. Verified this doesn't break anything downstream: only two consumers ever look past `TokenView.count` — `analyze.ts`'s `buildRepeatedSubstringIndex(tokenView.tokens)` (used by `repeated-block`, confirmed it still finds real repeated spans against synthetic tokens) and the class histogram/byte-range shape itself, which nothing besides display code inspects.
+
+## calibrate anthropic
+
+`tokensift calibrate anthropic run` is the only network call anywhere in this package, and it only fires when this specific command runs, never from `analyze`/`check`/anything auto-discovered. Same mechanism serves two purposes: the maintainer runs it once against a dedicated fixture corpus (`test/fixtures/calibration/anthropic-samples.json`, not the same file as the template `init` writes) to produce the bundled default; any downstream user can run it again against their own fixtures and their own key to produce a local override that better fits their own content mix, stored separately and preferred over the bundled default per exact model id.
+
+Fitting is a small fixed-point iteration, not a joint least-squares solve: each round, attribute every sample's actual token count across classes in proportion to what the *current* ratios already predict for that class, not proportional to raw char share (a class with a much larger ratio, like whitespace, genuinely earns a smaller token share per char than a dense class like punctuation, and naive char-share attribution ignores that). A final pass rescales all ratios by a single multiplicative correction factor (real predicted total vs. real actual total, using the actual discrete `Math.ceil`-based estimator, not the continuous fitting approximation) since the continuous fit systematically under-corrects for the rounding-up bias `Math.ceil` introduces on every run — verified against a synthetic ground truth this removes most of the remaining bias without needing to model the rounding directly. Disclosed simplification, not a claim of statistical rigor; the resulting `meanAbsPercentError` is measured and stored alongside the ratios, not asserted.
+
+Calibration is keyed by exact model id, not provider family, since real per-model tokenizer behavior can differ across Claude generations. An unrecognized `claude-*` id throws rather than falling back to a sibling model's calibration.
 
 ## Repeated-substring engine
 
