@@ -1,6 +1,6 @@
 {
   "name": "tokensift",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Token-efficiency linter for LLM prompts and payloads",
   "keywords": ["llm", "tokens", "linter", "openai", "anthropic", "prompt-engineering"],
   "license": "MIT",
