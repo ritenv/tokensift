@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.8.1
+
+### Patch Changes
+
+- ec017ac: Updated README.md
+
 ## 0.8.0
 
 ### Minor Changes
