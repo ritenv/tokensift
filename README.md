@@ -4,7 +4,36 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early scaffold. The core engine works: encoder abstraction, rule framework, shared services (JSON region parsing, repeated-substring detection), template slots, 18 rules, a CLI with `analyze`/`check`/`budget init`/`calibrate`, and `tokensift/matchers` for vitest/jest. OpenAI models are exact. Claude models (`claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`) have a real estimate encoder with bundled calibration data, measured mean error ~7.6%; other Claude model ids throw until calibrated, see below. Most reporters and CLI commands beyond those don't exist yet. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early, actively developed. Core engine, 18 rules, a CLI (`analyze`/`check`/`budget init`/`calibrate`), and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [What's here](#whats-here) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+
+## Contents
+
+- [What is this?](#what-is-this)
+- [Install](#install)
+- [Quickstart](#quickstart)
+  - [Running everything at once](#running-everything-at-once)
+  - [Template slots](#template-slots)
+- [CLI](#cli)
+  - [Baseline regression](#baseline-regression)
+  - [`check` and `budget init`](#check-and-budget-init)
+  - [`calibrate`](#calibrate)
+  - [Config file](#config-file)
+- [Test matchers](#test-matchers)
+- [Rules](#rules)
+- [What's here](#whats-here)
+- [What's not here yet](#whats-not-here-yet)
+- [Non-goals](#non-goals)
+- [License](#license)
+
+## What is this?
+
+LLM APIs charge per token, and token counts don't line up with characters or words as cleanly as you'd expect. A UUID, a base64-encoded file, an indented JSON blob: all of these cost more tokens than their length suggests, because the tokenizer can't find any reusable pattern in them. tokensift reads a prompt (or a whole message array, or a tool schema) and points out exactly where that's happening: this UUID cost 18 tokens and a short id would've cost 3, this block of instructions got pasted twice, this JSON would tokenize the same minified.
+
+It does this by actually tokenizing the text with the encoder the provider uses, not by estimating from character count. For OpenAI models that means the real BPE vocabulary, so counts are exact. For Claude, where no public tokenizer exists, it uses a calibrated estimate and says so on every finding (`confidence: "estimate"` vs `"exact"`).
+
+If code linters are a useful comparison: this is that, but for token cost instead of style. Same idea as ESLint flagging an unused variable, just aimed at a different kind of waste: text that costs money and context-window space without doing anything for the model.
+
+Two ways to use it: as a library, called from your own code or test suite, or as a CLI, pointed at prompt files and wired into CI. Both run the same rules and produce the same findings.
 
 ## Install
 
@@ -12,7 +41,7 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
 pnpm add tokensift
 ```
 
-## Usage
+## Quickstart
 
 An incident triage prompt that asks the model to repeat a trace id back so an
 engineer can find it in the logs. The model never has to parse the UUID,
