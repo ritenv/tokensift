@@ -1,5 +1,10 @@
 # tokensift
 
+[![CI](https://img.shields.io/github/actions/workflow/status/ritenv/tokensift/ci.yml?branch=main)](https://github.com/ritenv/tokensift/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/tokensift)](https://www.npmjs.com/package/tokensift)
+[![npm downloads](https://img.shields.io/npm/dm/tokensift)](https://www.npmjs.com/package/tokensift)
+[![license](https://img.shields.io/npm/l/tokensift)](./LICENSE)
+
 Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
