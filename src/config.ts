@@ -1,13 +1,11 @@
 import { analyze } from "./analyze.js";
 import type { Encoder } from "./encoder.js";
+import type { VolumeOptions } from "./pricing.js";
 import type { Rule } from "./rule.js";
 import { builtinRules } from "./rules/index.js";
 import type { AnalysisInput, Severity } from "./types.js";
 
-export interface VolumeConfig {
-  requestsPerDay?: number;
-  requestsPerMonth?: number;
-}
+export type VolumeConfig = VolumeOptions;
 
 export interface Config {
   model: string;
@@ -47,6 +45,7 @@ export function createLinter(config: Config) {
         budget: overrides?.budget ?? config.budget,
         baseline: overrides?.baseline,
         encoder: overrides?.encoder,
+        volume: config.volume,
       }),
   };
 }

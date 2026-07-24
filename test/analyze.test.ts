@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { analyze } from "../src/analyze.js";
+import type { Encoder } from "../src/encoder.js";
 import type { Rule } from "../src/rule.js";
 import { dyn, t } from "../src/tag.js";
-import type { Message } from "../src/types.js";
+import type { Message, TokenClass } from "../src/types.js";
 
 // A minimal rule that just flags every occurrence of the word "please",
 // enough to prove findings flow through analyze() without pulling in a real
@@ -170,6 +171,60 @@ Ticket: ${dyn("ticketBody", { sample: "my billing failed twice this month" })}`;
 
     const report = analyze("abcdefgh", { model: "gpt-4o", rules: [overlapping] });
     expect(report.applyFixes()).toBe("AAAdefgh");
+  });
+
+  it("attaches Finding.cost when pricing data exists for the model", () => {
+    const report = analyze("could you please help me", {
+      model: "gpt-4o",
+      rules: [flagsPlease],
+    });
+    expect(report.findings[0]?.cost?.perCall.amount).toBeGreaterThan(0);
+    expect(report.findings[0]?.cost?.perCall.currency).toBe("USD");
+    expect(report.findings[0]?.cost?.atVolume).toBeUndefined();
+  });
+
+  it("projects Finding.cost.atVolume when volume is configured", () => {
+    const report = analyze("could you please help me", {
+      model: "gpt-4o",
+      rules: [flagsPlease],
+      volume: { requestsPerDay: 1000 },
+    });
+    expect(report.findings[0]?.cost?.atVolume?.amount).toBeGreaterThan(0);
+  });
+
+  it("leaves Finding.cost undefined for a model with no pricing data", () => {
+    const emptyHistogram: Record<TokenClass, number> = {
+      word: 0,
+      punct: 0,
+      whitespace: 0,
+      "digit-fragment": 0,
+      "hex-fragment": 0,
+      other: 0,
+    };
+    const stubEncoder: Encoder = {
+      id: "custom-model",
+      family: "custom",
+      mode: "estimate",
+      countTokens: () => 1,
+      tokenize: () => ({
+        text: "",
+        tokens: [],
+        count: 1,
+        stats: {
+          charsPerToken: 1,
+          whitespaceShare: 0,
+          classHistogram: emptyHistogram,
+          perLineCosts: [1],
+        },
+      }),
+    };
+
+    const report = analyze("please help", {
+      model: "custom-model",
+      rules: [flagsPlease],
+      encoder: stubEncoder,
+    });
+    expect(report.findings[0]?.cost).toBeUndefined();
   });
 
   it("gives rules an indent map, one entry per line", () => {

@@ -1,5 +1,6 @@
 import type { Encoder } from "./encoder.js";
 import { resolveEncoder } from "./encoder.js";
+import { type VolumeOptions, computeCost } from "./pricing.js";
 import type { AnalysisContext, Rule } from "./rule.js";
 import { findJsonRegions } from "./services/json-regions.js";
 import { buildRepeatedSubstringIndex } from "./services/repeated-substring.js";
@@ -32,6 +33,8 @@ export interface AnalyzeOptions {
   baseline?: number;
   /** bypasses resolveEncoder(model) with a specific Encoder instance, e.g. a locally-calibrated one */
   encoder?: Encoder;
+  /** request volume, used to project Finding.cost.atVolume when pricing data exists for the model */
+  volume?: VolumeOptions;
 }
 
 export interface ApplyFixesOptions {
@@ -111,6 +114,9 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
   const byRule: Record<string, Finding[]> = {};
   for (const rule of options.rules ?? []) {
     const found = rule.check(ctx, rule.defaultSeverity);
+    for (const finding of found) {
+      finding.cost = computeCost(finding.tokens.saved, options.model, options.volume);
+    }
     findings.push(...found);
     byRule[rule.id] = found;
   }
