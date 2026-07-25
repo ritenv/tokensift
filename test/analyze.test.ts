@@ -230,6 +230,54 @@ Ticket: ${dyn("ticketBody", { sample: "my billing failed twice this month" })}`;
     expect(report.findings[0]?.cost).toBeUndefined();
   });
 
+  it("report.summary.cost sums every finding's cost", () => {
+    const flagsTwoWords: Rule = {
+      id: "flags-two-words",
+      defaultSeverity: "info",
+      why: "test fixture rule",
+      check(ctx, severity) {
+        return ["please", "help"].map((word) => {
+          const idx = ctx.text.indexOf(word);
+          return {
+            ruleId: "flags-two-words",
+            severity,
+            message: `found '${word}'`,
+            why: "test fixture rule",
+            loc: { input: ctx.inputRef, range: [idx, idx + word.length] },
+            tokens: { current: 1, afterFix: 0, saved: 1 },
+            confidence: "exact" as const,
+          };
+        });
+      },
+    };
+
+    const report = analyze("could you please help me", {
+      model: "gpt-4o",
+      rules: [flagsTwoWords],
+    });
+
+    expect(report.findings).toHaveLength(2);
+    const expectedPerCall =
+      report.findings[0]!.cost!.perCall.amount + report.findings[1]!.cost!.perCall.amount;
+    expect(report.summary.cost?.perCall.amount).toBeCloseTo(expectedPerCall);
+    expect(report.summary.cost?.per1000Calls.amount).toBeCloseTo(expectedPerCall * 1000);
+  });
+
+  it("report.summary.cost.atVolume is only set when every finding has one", () => {
+    const report = analyze("could you please help me", {
+      model: "gpt-4o",
+      rules: [flagsPlease],
+      volume: { requestsPerDay: 1000 },
+    });
+    expect(report.summary.cost?.atVolume?.amount).toBeGreaterThan(0);
+  });
+
+  it("report.summary.cost is undefined when nothing has pricing data", () => {
+    const report = analyze("summarize the ticket", { model: "gpt-4o" });
+    expect(report.findings).toHaveLength(0);
+    expect(report.summary.cost).toBeUndefined();
+  });
+
   it("gives rules an indent map, one entry per line", () => {
     let seen: number[] = [];
     const capturesIndent: Rule = {

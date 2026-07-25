@@ -57,8 +57,8 @@ export function formatPretty(results: FileResult[], options: FormatPrettyOptions
     .filter((f) => f.tokens.saved > 0);
 
   const totalWaste = allFindings.reduce((sum, f) => sum + f.tokens.saved, 0);
-  const costs = allFindings
-    .map((f) => f.cost?.per1000Calls.amount)
+  const costs = results
+    .map((r) => r.report.summary.cost?.per1000Calls.amount)
     .filter((amount): amount is number => amount !== undefined);
   const totalCost = costs.length > 0 ? costs.reduce((sum, a) => sum + a, 0) : undefined;
 

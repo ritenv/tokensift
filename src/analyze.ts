@@ -10,6 +10,7 @@ import type {
   Finding,
   InputRef,
   Message,
+  Money,
   Slot,
   TokenView,
 } from "./types.js";
@@ -49,11 +50,39 @@ export interface Report {
     staticTokens: number;
     dynamicBudget: number;
     totalWasteTokens: number;
+    /** sum of every finding's cost; undefined when no finding has pricing data */
+    cost?: { perCall: Money; per1000Calls: Money; atVolume?: Money };
   };
   findings: Finding[];
   byRule: Record<string, Finding[]>;
   /** returns the input with autofixable findings applied; pure, never writes anything */
   applyFixes(options?: ApplyFixesOptions): string;
+}
+
+function aggregateCost(findings: Finding[]): Report["summary"]["cost"] {
+  const costed = findings.filter(
+    (f): f is Finding & { cost: NonNullable<Finding["cost"]> } => f.cost !== undefined,
+  );
+  if (costed.length === 0) return undefined;
+
+  const perCall: Money = {
+    amount: costed.reduce((sum, f) => sum + f.cost.perCall.amount, 0),
+    currency: "USD",
+  };
+  const per1000Calls: Money = {
+    amount: costed.reduce((sum, f) => sum + f.cost.per1000Calls.amount, 0),
+    currency: "USD",
+  };
+
+  const atVolumeAmounts = costed
+    .map((f) => f.cost.atVolume?.amount)
+    .filter((amount): amount is number => amount !== undefined);
+  const atVolume: Money | undefined =
+    atVolumeAmounts.length === costed.length
+      ? { amount: atVolumeAmounts.reduce((sum, a) => sum + a, 0), currency: "USD" }
+      : undefined;
+
+  return { perCall, per1000Calls, atVolume };
 }
 
 interface Normalized {
@@ -157,6 +186,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
       staticTokens: tokenView.count - dynamicBudget,
       dynamicBudget,
       totalWasteTokens,
+      cost: aggregateCost(findings),
     },
     findings,
     byRule,

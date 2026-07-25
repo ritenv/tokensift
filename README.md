@@ -165,7 +165,7 @@ tokensift ticket.md --model gpt-4o --format json
   "results": [
     {
       "file": "ticket.md",
-      "summary": { "totalTokens": 23, ... },
+      "summary": { "totalTokens": 23, "cost": { "perCall": { "amount": 0.0000375, "currency": "USD" }, "per1000Calls": { "amount": 0.0375, "currency": "USD" } }, ... },
       "findings": [ { "ruleId": "uuid-bloat", "tokens": { ... }, "cost": { "perCall": { "amount": 0.0000375, "currency": "USD" }, "per1000Calls": { "amount": 0.0375, "currency": "USD" } }, ... } ],
       "byRule": { ... }
     }
@@ -215,7 +215,7 @@ tokensift calibrate anthropic run --model claude-sonnet-4-5
 
 ### Cost and pricing
 
-Every finding carries real dollar cost, not just a token count: `Finding.cost.perCall` is `tokens.saved` multiplied by the real price for the model you passed, sourced from a curated snapshot of [LiteLLM's pricing table](https://github.com/BerriAI/litellm) (MIT-licensed, see [LICENSE-THIRD-PARTY.md](./LICENSE-THIRD-PARTY.md)). `perCall` is usually a fraction of a cent, so `Finding.cost.per1000Calls` is the same number at a denomination that actually reads as a number, same idea as a vendor quoting "$X per 1K tokens" instead of a fractional-cent per-token rate; it's what the CLI's pretty output shows next to each finding. Set a volume in your config file and every finding also gets `atVolume`, the projected monthly cost of leaving that waste in place:
+Every finding carries real dollar cost, not just a token count: `Finding.cost.perCall` is `tokens.saved` multiplied by the real price for the model you passed, sourced from a curated snapshot of [LiteLLM's pricing table](https://github.com/BerriAI/litellm) (MIT-licensed, see [LICENSE-THIRD-PARTY.md](./LICENSE-THIRD-PARTY.md)). `perCall` is usually a fraction of a cent, so `Finding.cost.per1000Calls` is the same number at a denomination that actually reads as a number, same idea as a vendor quoting "$X per 1K tokens" instead of a fractional-cent per-token rate; it's what the CLI's pretty output shows next to each finding. `report.summary.cost` is the same shape, summed across every finding, so you get one total for the whole file without adding it up yourself. Set a volume in your config file and every finding also gets `atVolume`, the projected monthly cost of leaving that waste in place:
 
 ```json
 {
