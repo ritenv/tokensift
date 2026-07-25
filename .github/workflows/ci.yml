@@ -26,6 +26,9 @@ jobs:
       - run: node dist/cli.js test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o
       - run: node dist/cli.js budget init test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o --budget-file /tmp/ci-budgets.json
       - run: node dist/cli.js check test/fixtures/uuid-bloat/support-ticket.txt --model gpt-4o --budget-file /tmp/ci-budgets.json
+      - run: node dist/cli.js test/fixtures/uuid-bloat/support-ticket.txt --model claude-sonnet-4-5
+      - run: node dist/cli.js budget init test/fixtures/uuid-bloat/support-ticket.txt --model claude-sonnet-4-5 --budget-file /tmp/ci-budgets-anthropic.json
+      - run: node dist/cli.js check test/fixtures/uuid-bloat/support-ticket.txt --model claude-sonnet-4-5 --budget-file /tmp/ci-budgets-anthropic.json
       - run: pnpm publint
       - run: pnpm attw
 
