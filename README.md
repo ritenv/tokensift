@@ -9,7 +9,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early, actively developed. Core engine, 18 rules, real dollar cost per finding, a CLI (`analyze`/`check`/`budget init`/`calibrate`/`pricing`), and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [What's here](#whats-here) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early, actively developed. Core engine, 18 rules, real dollar cost per finding, a CLI (`analyze`/`check`/`budget init`/`calibrate`/`pricing`), and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [Cost and pricing](#cost-and-pricing) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Contents
 
@@ -25,7 +25,6 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
   - [Config file](#config-file)
 - [Test matchers](#test-matchers)
 - [Rules](#rules)
-- [What's here](#whats-here)
 - [What's not here yet](#whats-not-here-yet)
 - [Non-goals](#non-goals)
 - [License](#license)
@@ -303,19 +302,6 @@ expect.extend(matchers);
 
 `toMatchTokenBaseline` records a token count the first time a test runs and compares against it on every run after, failing once growth passes 10%, same tolerance as the CLI's `baseline-regression` rule. It stores counts in `.tokensift/matcher-baselines.json`, keyed by test file and test name, commit that file alongside your tests. Pass `{ updateBaseline: true }` once growth is intentional.
 
-## What's here
-
-- Exact token counts for OpenAI models (o200k_base, cl100k_base).
-- A real estimate encoder for Anthropic models, character-class-based, calibrated via `tokensift calibrate anthropic run` against Anthropic's own token-counting endpoint. Bundled calibration data ships for `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` (~7.6% mean error); other `claude-*` ids throw until you calibrate them yourself.
-- `analyze()`, `tokenize()`, `createLinter()`, `defineConfig()`.
-- Eighteen rules, see the table below.
-- A declared token budget (`budget-exceeded`), off by default until you set one.
-- A recorded baseline (`baseline-regression`), off by default until you record one.
-- `t` / `dyn` for template-aware analysis.
-- Real dollar cost on every finding (`Finding.cost.perCall`, `per1000Calls`, plus `atVolume` when you set a request volume), sourced from a curated LiteLLM pricing snapshot, refreshable via `tokensift pricing update` and overridable per model.
-- A `tokensift` CLI: `analyze`, `check`, `budget init`, `calibrate anthropic`, `pricing show`/`update` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
-- `tokensift/matchers`: `toBeUnderTokens`, `toHaveNoTokensiftErrors`, `toMatchTokenBaseline` for vitest/jest.
-
 ## Rules
 
 | Rule | Severity | Autofix | Why | Suggestion |
@@ -341,12 +327,8 @@ expect.extend(matchers);
 
 ## What's not here yet
 
-- Gemini encoders. They throw a clear error rather than a guessed count. Anthropic has a real encoder with bundled calibration for the current-generation models only; other Claude ids throw until calibrated, same throw-rather-than-guess policy.
-- The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet, including cache-aware pricing (cache-read vs. base input rates) for those rules specifically.
-- The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.
-- `diff`, `extract`, `xray`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too (the library function, distinct from the `budget init` CLI command above).
-- `.js`/`.ts` config file loading, only `.json` works right now.
-- `tokensift/mcp`, `tokensift/action`.
+- Gemini models' support. At present they throw a NotImplemented error.
+- Reporters beyond `pretty` and `json`.
 
 ## Non-goals
 
