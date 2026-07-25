@@ -1,6 +1,6 @@
 import type { Encoder } from "./encoder.js";
 import { resolveEncoder } from "./encoder.js";
-import { type VolumeOptions, computeCost } from "./pricing.js";
+import { type PricingOverride, type VolumeOptions, computeCost } from "./pricing.js";
 import type { AnalysisContext, Rule } from "./rule.js";
 import { findJsonRegions } from "./services/json-regions.js";
 import { buildRepeatedSubstringIndex } from "./services/repeated-substring.js";
@@ -35,6 +35,8 @@ export interface AnalyzeOptions {
   encoder?: Encoder;
   /** request volume, used to project Finding.cost.atVolume when pricing data exists for the model */
   volume?: VolumeOptions;
+  /** per-model price overrides, keyed by exact model id; see Config.pricing.overrides */
+  pricingOverrides?: Record<string, PricingOverride>;
 }
 
 export interface ApplyFixesOptions {
@@ -115,7 +117,12 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
   for (const rule of options.rules ?? []) {
     const found = rule.check(ctx, rule.defaultSeverity);
     for (const finding of found) {
-      finding.cost = computeCost(finding.tokens.saved, options.model, options.volume);
+      finding.cost = computeCost(
+        finding.tokens.saved,
+        options.model,
+        options.volume,
+        options.pricingOverrides,
+      );
     }
     findings.push(...found);
     byRule[rule.id] = found;

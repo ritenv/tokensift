@@ -42,4 +42,47 @@ describe("formatPretty", () => {
     expect(plain).not.toContain("\x1b[");
     expect(colored).toContain("\x1b[");
   });
+
+  it("shows a per-1K-calls dollar figure on the finding line and the total", () => {
+    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+      model: "gpt-4o",
+      rules: [uuidBloat],
+    });
+    const output = formatPretty([{ file: "ticket.txt", report }]);
+    expect(output).toMatch(/uuid-bloat.*\(\$[\d.]+ \/ 1K calls\)/);
+    expect(output).toMatch(/total addressable waste ~= \d+ tokens \(~\$[\d.]+ \/ 1K calls\)/);
+  });
+
+  it("omits the dollar figure entirely when the model has no pricing data", () => {
+    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+      model: "custom-model",
+      rules: [uuidBloat],
+      encoder: {
+        id: "custom-model",
+        family: "custom",
+        mode: "estimate",
+        countTokens: (text) => text.length,
+        tokenize: (text) => ({
+          text,
+          tokens: [],
+          count: text.length,
+          stats: {
+            charsPerToken: 1,
+            whitespaceShare: 0,
+            classHistogram: {
+              word: 0,
+              punct: 0,
+              whitespace: 0,
+              "digit-fragment": 0,
+              "hex-fragment": 0,
+              other: 0,
+            },
+            perLineCosts: [text.length],
+          },
+        }),
+      },
+    });
+    const output = formatPretty([{ file: "ticket.txt", report }]);
+    expect(output).not.toContain("1K calls");
+  });
 });

@@ -180,6 +180,9 @@ Ticket: ${dyn("ticketBody", { sample: "my billing failed twice this month" })}`;
     });
     expect(report.findings[0]?.cost?.perCall.amount).toBeGreaterThan(0);
     expect(report.findings[0]?.cost?.perCall.currency).toBe("USD");
+    expect(report.findings[0]?.cost?.per1000Calls.amount).toBeCloseTo(
+      report.findings[0]!.cost!.perCall.amount * 1000,
+    );
     expect(report.findings[0]?.cost?.atVolume).toBeUndefined();
   });
 

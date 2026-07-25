@@ -5,6 +5,7 @@ import { loadBaseline, resolveBaselinePath } from "./baseline-store.js";
 import { loadBudget, resolveBudgetPath } from "./budget-store.js";
 import { resolveAnthropicOverride } from "./calibration-override.js";
 import { loadConfig } from "./load-config.js";
+import { loadPricingOverrides } from "./pricing-override.js";
 import { formatJson } from "./reporter-json.js";
 import { formatPretty } from "./reporter-pretty.js";
 import { resolveInputs } from "./resolve-inputs.js";
@@ -18,6 +19,7 @@ interface CheckOptions {
   budgetFile?: string;
   baselineFile?: string;
   calibrationFile?: string;
+  pricingFile?: string;
 }
 
 function parseCheckArgs(argv: string[]): CheckOptions {
@@ -28,6 +30,7 @@ function parseCheckArgs(argv: string[]): CheckOptions {
   let budgetFile: string | undefined;
   let baselineFile: string | undefined;
   let calibrationFile: string | undefined;
+  let pricingFile: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
@@ -55,6 +58,9 @@ function parseCheckArgs(argv: string[]): CheckOptions {
       case "--calibration-file":
         calibrationFile = requireValue(argv, ++i, "--calibration-file");
         continue;
+      case "--pricing-file":
+        pricingFile = requireValue(argv, ++i, "--pricing-file");
+        continue;
       default:
         if (arg.startsWith("--")) throw new Error(`unknown flag '${arg}'`);
         inputs.push(arg);
@@ -65,7 +71,7 @@ function parseCheckArgs(argv: string[]): CheckOptions {
     throw new Error("no inputs given; pass file paths or globs to check");
   }
 
-  return { inputs, model, format, config, budgetFile, baselineFile, calibrationFile };
+  return { inputs, model, format, config, budgetFile, baselineFile, calibrationFile, pricingFile };
 }
 
 export async function runCheck(argv: string[], cwd: string): Promise<RunResult> {
@@ -82,8 +88,16 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
     const baselineStore = loadBaseline(resolveBaselinePath(cwd, options.baselineFile));
     const resolved = resolveInputs(options.inputs, cwd);
 
-    const linter = createLinter(defineConfig({ model, rules: config?.rules }));
+    const linter = createLinter(
+      defineConfig({
+        model,
+        rules: config?.rules,
+        volume: config?.volume,
+        pricing: config?.pricing,
+      }),
+    );
     const encoder = resolveAnthropicOverride(model, cwd, options.calibrationFile);
+    const pricingOverrides = loadPricingOverrides(cwd, options.pricingFile);
     const results = resolved.map(({ file, input }) => {
       const key = relative(cwd, file);
       return {
@@ -92,6 +106,7 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
           budget: budgetStore[key],
           baseline: baselineStore[key],
           encoder,
+          pricingOverrides,
         }),
       };
     });

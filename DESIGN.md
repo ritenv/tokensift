@@ -8,7 +8,11 @@ OpenAI exact counts use gpt-tokenizer for the real o200k_base/cl100k_base BPE ra
 
 ## Cost model
 
-`Finding.cost` is optional for now. There's no pricing table yet, so nothing can compute `perCall`/`atVolume`. Making up numbers here would break the exactness promise. Gets filled in once pricing data is curated.
+`Finding.cost` is populated now: `perCall` is `tokens.saved * inputCostPerToken` for the resolved model, and `atVolume` is added when `Config.volume` (`requestsPerDay`/`requestsPerMonth`) is set. Pricing data comes from a curated, filtered snapshot of [LiteLLM's pricing table](https://github.com/BerriAI/litellm) (`src/pricing-data.ts`, MIT-licensed, see LICENSE-THIRD-PARTY.md), reduced to just the models `resolveEncoder()` actually resolves — bundling all ~3000 LiteLLM entries would be pure bloat for models this package can't even tokenize.
+
+The ingestion is a manual, explicit script (`scripts/update-pricing.mjs`, run via `pnpm pricing:update`), not a build step: pricing data goes stale on its own schedule, unrelated to code releases, so baking a fetch into `build`/`prepublishOnly` would either make releases flaky (network dependency) or silently ship stale numbers forever (if run once and forgotten). Same reasoning as `calibrate anthropic run` staying a separate opt-in command rather than something `analyze` triggers automatically.
+
+`tokensift pricing update` is the end-user-facing equivalent, but deliberately doesn't touch the installed package's bundled data (mutating files inside `node_modules` is fragile and gets wiped on every reinstall). It writes a local `.tokensift/pricing-overrides.json` instead, which `analyze`/`check` prefer over the bundled default per exact model id — the same override-file mechanism `calibrate anthropic run` already uses for calibration data, reused here rather than inventing a second pattern. `Config.pricing.overrides` (per spec §9) is the config-file equivalent, in dollars-per-million-tokens since that's how humans actually think about LLM pricing, converted to per-token internally to match the bundled data's shape.
 
 ## Estimate encoders
 

@@ -55,7 +55,7 @@ export interface Finding {
   why: string;
   loc: { input: InputRef; range: [number, number]; messageIndex?: number };
   tokens: { current: number; afterFix: number; saved: number };
-  cost?: { perCall: Money; atVolume?: Money };
+  cost?: { perCall: Money; per1000Calls: Money; atVolume?: Money };
   fix?: Fix;
   suggestion?: string;
   confidence: Confidence;
