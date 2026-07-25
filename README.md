@@ -16,7 +16,6 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
 - [What is this?](#what-is-this)
 - [Install](#install)
 - [Quickstart](#quickstart)
-  - [Running everything at once](#running-everything-at-once)
   - [Template slots](#template-slots)
 - [CLI](#cli)
   - [Baseline regression](#baseline-regression)
@@ -49,50 +48,13 @@ pnpm add tokensift
 
 ## Quickstart
 
-An incident triage prompt that asks the model to repeat a trace id back so an
-engineer can find it in the logs. The model never has to parse the UUID,
-just echo it, so a short id works just as well:
-
-```ts
-import { analyze, uuidBloat } from "tokensift";
-
-const prompt = `You are an incident triage assistant. Summarize the error below for the
-on-call engineer, and repeat the trace id so they can search the logs.
-
-trace_id: 550e8400-e29b-41d4-a716-446655440000
-error: payment gateway timeout after 30s, 3 consecutive failures`;
-
-const report = analyze(prompt, { model: "gpt-4o", rules: [uuidBloat] });
-console.log(report.findings[0]);
-```
-
-```js
-{
-  ruleId: 'uuid-bloat',
-  severity: 'warn',
-  message: "UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
-  why: 'hex-with-dashes has no merges in BPE vocabularies, so UUIDs tokenize close to 1 token per 1-2 characters',
-  tokens: { current: 18, afterFix: 3, saved: 15 },
-  cost: { perCall: { amount: 0.0000375, currency: 'USD' }, per1000Calls: { amount: 0.0375, currency: 'USD' } },
-  suggestion: "map '550e8400-e29b-41d4-a716-446655440000' to a short id like 'id-1' before prompting, and restore it in your own code after the response",
-  confidence: 'exact',
-  ...
-}
-```
-
-18 of the prompt's 70 tokens are that one trace id. Swap it for `id-1` before
-the call, and swap the model's `id-1` back to the real UUID in your own code
-before showing the summary to the engineer. The engineer still gets the real
-id; the model just never had to spend 18 tokens tokenizing it.
-
-### Running everything at once
-
-`builtinRules` runs every shipped rule together. Here's a support-ticket classifier prompt with two few-shot examples and an output schema, the kind of thing that grows by copy-paste:
+A support-ticket classifier prompt with two few-shot examples, a ticket id, and an output schema, the kind of thing that grows by copy-paste. `builtinRules` runs every shipped rule together:
 
 ```ts
 import { analyze, builtinRules } from "tokensift";
 
 const prompt = `You are a support ticket classifier. Classify each ticket into one of: billing, technical, account.
+Remember to respond with only the category name, nothing else.
 
 Example 1:
 Ticket: "I was charged twice this month"
@@ -104,6 +66,8 @@ Ticket: "I can't reset my password"
 Classification: account
 Remember to respond with only the category name, nothing else.
 
+Ticket 550e8400-e29b-41d4-a716-446655440000, from a customer: "My account was charged twice and I need a refund"
+
 Output using this schema:
 {
   "category": "string",
@@ -111,9 +75,68 @@ Output using this schema:
 }`;
 
 const report = analyze(prompt, { model: "gpt-4o", rules: builtinRules });
+console.log(report.findings);
 ```
 
-That's 101 tokens total, and two rules both fire: `repeated-block` catches the reminder line pasted after each example (26 tokens for something said once would cost 13), and `pretty-json` catches the indented schema (16 tokens vs 9 minified).
+Three rules catch three different problems in this prompt. Full output, unedited:
+
+```js
+[
+  {
+    ruleId: 'uuid-bloat',
+    severity: 'warn',
+    message: "UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
+    why: 'hex-with-dashes has no merges in BPE vocabularies, so UUIDs tokenize close to 1 token per 1-2 characters',
+    loc: { input: { kind: 'string' }, range: [445, 481] },
+    tokens: { current: 18, afterFix: 3, saved: 15 },
+    suggestion: "map '550e8400-e29b-41d4-a716-446655440000' to a short id like 'id-1' before prompting, and restore it in your own code after the response",
+    confidence: 'exact',
+    cost: { perCall: { amount: 0.0000375, currency: 'USD' }, per1000Calls: { amount: 0.0375, currency: 'USD' } }
+  },
+  {
+    ruleId: 'pretty-json',
+    severity: 'warn',
+    message: 'pretty-printed JSON costs 16 tokens, minified costs 9',
+    why: "indented JSON spends tokens on newlines and leading spaces at every nesting level; the model doesn't need pretty-printing to parse structured data",
+    loc: { input: { kind: 'string' }, range: [578, 630] },
+    tokens: { current: 16, afterFix: 9, saved: 7 },
+    fix: {
+      description: 'minify JSON region',
+      range: [578, 630],
+      replacement: '{"category":"string","confidence":"number"}'
+    },
+    suggestion: 'minify the JSON region',
+    confidence: 'exact',
+    cost: { perCall: { amount: 0.0000175, currency: 'USD' }, per1000Calls: { amount: 0.0175, currency: 'USD' } }
+  },
+  {
+    ruleId: 'repeated-block',
+    severity: 'warn',
+    message: 'a 12-token span repeats 3 times, costing 36 tokens total',
+    why: "verbatim spans repeated across a prompt (boilerplate headers, re-pasted examples) are paid every time they appear; the model doesn't need the repetition to use them",
+    loc: { input: { kind: 'string' }, range: [100, 164] },
+    tokens: { current: 36, afterFix: 12, saved: 24 },
+    suggestion: 'state this block once and refer back to it instead of repasting it',
+    confidence: 'exact',
+    cost: { perCall: { amount: 0.00006, currency: 'USD' }, per1000Calls: { amount: 0.06, currency: 'USD' } }
+  }
+]
+```
+
+Same three findings, condensed:
+
+```ts
+report.findings.map((f) => `${f.ruleId}: ${f.message}`);
+```
+```js
+[
+  "uuid-bloat: UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
+  "pretty-json: pretty-printed JSON costs 16 tokens, minified costs 9",
+  "repeated-block: a 12-token span repeats 3 times, costing 36 tokens total"
+]
+```
+
+150 tokens total, 46 of them wasted. `report.summary.cost`: $0.000115 per call, $0.115 per 1,000 calls, real money once this runs at any volume.
 
 ### Template slots
 
