@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.9.1
+
+### Patch Changes
+
+- 63492f6: Just a readme update
+
 ## 0.9.0
 
 ### Minor Changes
