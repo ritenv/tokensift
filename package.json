@@ -62,6 +62,7 @@
     "attw": "attw --pack .",
     "changeset": "changeset",
     "changeset:version": "changeset version && biome check --write .",
+    "pricing:update": "node scripts/update-pricing.mjs && biome check --write src/pricing-data.ts",
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {

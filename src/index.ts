@@ -6,6 +6,8 @@ export { resolveEncoder } from "./encoder.js";
 export type { Encoder, EncoderMode } from "./encoder.js";
 export { AnthropicEncoder } from "./encoders/anthropic.js";
 export type { AnthropicCalibration } from "./encoders/anthropic.js";
+export { resolvePricing } from "./pricing.js";
+export type { PricingRow, VolumeOptions } from "./pricing.js";
 export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,

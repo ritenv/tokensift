@@ -9,19 +9,19 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early, actively developed. Core engine, 18 rules, a CLI (`analyze`/`check`/`budget init`/`calibrate`), and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [What's here](#whats-here) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early, actively developed. Core engine, 18 rules, real dollar cost per finding, a CLI (`analyze`/`check`/`budget init`/`calibrate`/`pricing`), and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [What's here](#whats-here) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Contents
 
 - [What is this?](#what-is-this)
 - [Install](#install)
 - [Quickstart](#quickstart)
-  - [Running everything at once](#running-everything-at-once)
   - [Template slots](#template-slots)
 - [CLI](#cli)
   - [Baseline regression](#baseline-regression)
   - [`check` and `budget init`](#check-and-budget-init)
   - [`calibrate`](#calibrate)
+  - [Cost and pricing](#cost-and-pricing)
   - [Config file](#config-file)
 - [Test matchers](#test-matchers)
 - [Rules](#rules)
@@ -48,49 +48,13 @@ pnpm add tokensift
 
 ## Quickstart
 
-An incident triage prompt that asks the model to repeat a trace id back so an
-engineer can find it in the logs. The model never has to parse the UUID,
-just echo it, so a short id works just as well:
-
-```ts
-import { analyze, uuidBloat } from "tokensift";
-
-const prompt = `You are an incident triage assistant. Summarize the error below for the
-on-call engineer, and repeat the trace id so they can search the logs.
-
-trace_id: 550e8400-e29b-41d4-a716-446655440000
-error: payment gateway timeout after 30s, 3 consecutive failures`;
-
-const report = analyze(prompt, { model: "gpt-4o", rules: [uuidBloat] });
-console.log(report.findings[0]);
-```
-
-```js
-{
-  ruleId: 'uuid-bloat',
-  severity: 'warn',
-  message: "UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
-  why: 'hex-with-dashes has no merges in BPE vocabularies, so UUIDs tokenize close to 1 token per 1-2 characters',
-  tokens: { current: 18, afterFix: 3, saved: 15 },
-  suggestion: "map '550e8400-e29b-41d4-a716-446655440000' to a short id like 'id-1' before prompting, and restore it in your own code after the response",
-  confidence: 'exact',
-  ...
-}
-```
-
-18 of the prompt's 70 tokens are that one trace id. Swap it for `id-1` before
-the call, and swap the model's `id-1` back to the real UUID in your own code
-before showing the summary to the engineer. The engineer still gets the real
-id; the model just never had to spend 18 tokens tokenizing it.
-
-### Running everything at once
-
-`builtinRules` runs every shipped rule together. Here's a support-ticket classifier prompt with two few-shot examples and an output schema, the kind of thing that grows by copy-paste:
+A support-ticket classifier prompt with two few-shot examples, a ticket id, and an output schema, the kind of thing that grows by copy-paste. `builtinRules` runs every shipped rule together:
 
 ```ts
 import { analyze, builtinRules } from "tokensift";
 
 const prompt = `You are a support ticket classifier. Classify each ticket into one of: billing, technical, account.
+Remember to respond with only the category name, nothing else.
 
 Example 1:
 Ticket: "I was charged twice this month"
@@ -102,6 +66,8 @@ Ticket: "I can't reset my password"
 Classification: account
 Remember to respond with only the category name, nothing else.
 
+Ticket 550e8400-e29b-41d4-a716-446655440000, from a customer: "My account was charged twice and I need a refund"
+
 Output using this schema:
 {
   "category": "string",
@@ -109,9 +75,68 @@ Output using this schema:
 }`;
 
 const report = analyze(prompt, { model: "gpt-4o", rules: builtinRules });
+console.log(report.findings);
 ```
 
-That's 101 tokens total, and two rules both fire: `repeated-block` catches the reminder line pasted after each example (26 tokens for something said once would cost 13), and `pretty-json` catches the indented schema (16 tokens vs 9 minified).
+Three rules catch three different problems in this prompt. Full output, unedited:
+
+```js
+[
+  {
+    ruleId: 'uuid-bloat',
+    severity: 'warn',
+    message: "UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
+    why: 'hex-with-dashes has no merges in BPE vocabularies, so UUIDs tokenize close to 1 token per 1-2 characters',
+    loc: { input: { kind: 'string' }, range: [445, 481] },
+    tokens: { current: 18, afterFix: 3, saved: 15 },
+    suggestion: "map '550e8400-e29b-41d4-a716-446655440000' to a short id like 'id-1' before prompting, and restore it in your own code after the response",
+    confidence: 'exact',
+    cost: { perCall: { amount: 0.0000375, currency: 'USD' }, per1000Calls: { amount: 0.0375, currency: 'USD' } }
+  },
+  {
+    ruleId: 'pretty-json',
+    severity: 'warn',
+    message: 'pretty-printed JSON costs 16 tokens, minified costs 9',
+    why: "indented JSON spends tokens on newlines and leading spaces at every nesting level; the model doesn't need pretty-printing to parse structured data",
+    loc: { input: { kind: 'string' }, range: [578, 630] },
+    tokens: { current: 16, afterFix: 9, saved: 7 },
+    fix: {
+      description: 'minify JSON region',
+      range: [578, 630],
+      replacement: '{"category":"string","confidence":"number"}'
+    },
+    suggestion: 'minify the JSON region',
+    confidence: 'exact',
+    cost: { perCall: { amount: 0.0000175, currency: 'USD' }, per1000Calls: { amount: 0.0175, currency: 'USD' } }
+  },
+  {
+    ruleId: 'repeated-block',
+    severity: 'warn',
+    message: 'a 12-token span repeats 3 times, costing 36 tokens total',
+    why: "verbatim spans repeated across a prompt (boilerplate headers, re-pasted examples) are paid every time they appear; the model doesn't need the repetition to use them",
+    loc: { input: { kind: 'string' }, range: [100, 164] },
+    tokens: { current: 36, afterFix: 12, saved: 24 },
+    suggestion: 'state this block once and refer back to it instead of repasting it',
+    confidence: 'exact',
+    cost: { perCall: { amount: 0.00006, currency: 'USD' }, per1000Calls: { amount: 0.06, currency: 'USD' } }
+  }
+]
+```
+
+Same three findings, condensed:
+
+```ts
+report.findings.map((f) => `${f.ruleId}: ${f.message}`);
+```
+```js
+[
+  "uuid-bloat: UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
+  "pretty-json: pretty-printed JSON costs 16 tokens, minified costs 9",
+  "repeated-block: a 12-token span repeats 3 times, costing 36 tokens total"
+]
+```
+
+150 tokens total, 46 of them wasted. `report.summary.cost`: $0.000115 per call, $0.115 per 1,000 calls, real money once this runs at any volume.
 
 ### Template slots
 
@@ -142,12 +167,12 @@ error: payment gateway timeout after 30s, 3 consecutive failures" | tokensift --
 
 ```
 <stdin>
-  warn  uuid-bloat  UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)
+  warn  uuid-bloat  UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token) ($0.038 / 1K calls)
 
 1 file(s), 1 finding(s) (0 error, 1 warn, 0 info)
 top opportunities:
   uuid-bloat (15 tokens)
-total addressable waste ~= 15 tokens
+total addressable waste ~= 15 tokens (~$0.038 / 1K calls)
 ```
 
 Or against real files: `tokensift prompts/*.md --model gpt-4o`. `**` works too (`tokensift "prompts/**/*.md" --model gpt-4o`), quote it so your shell doesn't expand it first.
@@ -161,7 +186,12 @@ tokensift ticket.md --model gpt-4o --format json
 {
   "schemaVersion": 1,
   "results": [
-    { "file": "ticket.md", "summary": { "totalTokens": 23, ... }, "findings": [ ... ], "byRule": { ... } }
+    {
+      "file": "ticket.md",
+      "summary": { "totalTokens": 23, "cost": { "perCall": { "amount": 0.0000375, "currency": "USD" }, "per1000Calls": { "amount": 0.0375, "currency": "USD" } }, ... },
+      "findings": [ { "ruleId": "uuid-bloat", "tokens": { ... }, "cost": { "perCall": { "amount": 0.0000375, "currency": "USD" }, "per1000Calls": { "amount": 0.0375, "currency": "USD" } }, ... } ],
+      "byRule": { ... }
+    }
   ]
 }
 ```
@@ -205,6 +235,38 @@ tokensift calibrate anthropic run --model claude-sonnet-4-5
 ```
 
 `init` refuses to overwrite an existing fixtures file unless you pass `--force`. `run` needs `ANTHROPIC_API_KEY` set (or `--api-key-env <name>` for a different variable) and at least 20 real samples, it calls Anthropic's token-counting endpoint once per sample and writes the fitted result to `.tokensift/anthropic-calibration.json` (`--out <path>` for somewhere else). This is the only network call anywhere in this package, and it only happens when you run this command, never during `analyze`/`check`. `analyze`/`check` pick up a local calibration file automatically for any model it has an entry for (`--calibration-file <path>` to point elsewhere), falling back to the bundled default otherwise.
+
+### Cost and pricing
+
+Every finding carries real dollar cost, not just a token count: `Finding.cost.perCall` is `tokens.saved` multiplied by the real price for the model you passed, sourced from a curated snapshot of [LiteLLM's pricing table](https://github.com/BerriAI/litellm) (MIT-licensed, see [LICENSE-THIRD-PARTY.md](./LICENSE-THIRD-PARTY.md)). `perCall` is usually a fraction of a cent, so `Finding.cost.per1000Calls` is the same number at a denomination that actually reads as a number, same idea as a vendor quoting "$X per 1K tokens" instead of a fractional-cent per-token rate; it's what the CLI's pretty output shows next to each finding. `report.summary.cost` is the same shape, summed across every finding, so you get one total for the whole file without adding it up yourself. Set a volume in your config file and every finding also gets `atVolume`, the projected monthly cost of leaving that waste in place:
+
+```json
+{
+  "model": "gpt-4o",
+  "volume": { "requestsPerDay": 25000 }
+}
+```
+
+`tokensift pricing show <model>` prints the rates tokensift is actually using for a model:
+
+```
+tokensift pricing show gpt-4o
+```
+```
+gpt-4o (openai, bundled)
+  input:  $2.5000 / 1M tokens
+  output: $10.0000 / 1M tokens
+  cache read: $1.2500 / 1M tokens
+```
+
+`tokensift pricing update` refetches the LiteLLM snapshot and writes a local `.tokensift/pricing-overrides.json` (`--out <path>` for somewhere else), which `analyze`/`check` prefer over the bundled default per exact model id, same override pattern as `calibrate`. This is the only other network call anywhere in this package besides `calibrate anthropic run`, strictly opt-in, never automatic. You can also hand-write overrides for a specific model, or set `pricing.overrides` in your config file, in dollars per million tokens:
+
+```json
+{
+  "model": "gpt-4o",
+  "pricing": { "overrides": { "gpt-4o": { "inputPerMTok": 2.0 } } }
+}
+```
 
 ### Config file
 
@@ -250,7 +312,8 @@ expect.extend(matchers);
 - A declared token budget (`budget-exceeded`), off by default until you set one.
 - A recorded baseline (`baseline-regression`), off by default until you record one.
 - `t` / `dyn` for template-aware analysis.
-- A `tokensift` CLI: `analyze`, `check`, `budget init`, `calibrate anthropic` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
+- Real dollar cost on every finding (`Finding.cost.perCall`, `per1000Calls`, plus `atVolume` when you set a request volume), sourced from a curated LiteLLM pricing snapshot, refreshable via `tokensift pricing update` and overridable per model.
+- A `tokensift` CLI: `analyze`, `check`, `budget init`, `calibrate anthropic`, `pricing show`/`update` commands, `pretty`/`json` output, `--fix`/`--write`, glob and stdin input, JSON config file, baseline and budget stores.
 - `tokensift/matchers`: `toBeUnderTokens`, `toHaveNoTokensiftErrors`, `toMatchTokenBaseline` for vitest/jest.
 
 ## Rules
@@ -279,10 +342,9 @@ expect.extend(matchers);
 ## What's not here yet
 
 - Gemini encoders. They throw a clear error rather than a guessed count. Anthropic has a real encoder with bundled calibration for the current-generation models only; other Claude ids throw until calibrated, same throw-rather-than-guess policy.
-- The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet.
-- Pricing data, `--volume`, and cost fields on findings.
+- The provider-mechanics rules (cache alignment, context-window fit, schema bloat, and the rest of group D). They need provider profile data this package doesn't have yet, including cache-aware pricing (cache-read vs. base input rates) for those rules specifically.
 - The `github`, `sarif`, `markdown`, and `xray-html` reporters. `--verify`, `--fix-aggressive`.
-- `diff`, `extract`, `xray`, `pricing`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too (the library function, distinct from the `budget init` CLI command above).
+- `diff`, `extract`, `xray`, `init` as CLI commands. `diff()` and `budget()` are stubs that throw as library functions too (the library function, distinct from the `budget init` CLI command above).
 - `.js`/`.ts` config file loading, only `.json` works right now.
 - `tokensift/mcp`, `tokensift/action`.
 

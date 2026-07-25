@@ -9,6 +9,8 @@ import { runCalibrateInit, runCalibrateRun } from "./calibrate.js";
 import { resolveAnthropicOverride } from "./calibration-override.js";
 import { runCheck } from "./check.js";
 import { loadConfig } from "./load-config.js";
+import { runPricingShow, runPricingUpdate } from "./pricing-cli.js";
+import { loadPricingOverrides } from "./pricing-override.js";
 import { formatJson } from "./reporter-json.js";
 import { formatPretty } from "./reporter-pretty.js";
 import { resolveInputs } from "./resolve-inputs.js";
@@ -48,11 +50,21 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
       }
     }
 
-    const linter = createLinter(defineConfig({ model, rules, autofix, budget }));
+    const linter = createLinter(
+      defineConfig({
+        model,
+        rules,
+        autofix,
+        budget,
+        volume: config?.volume,
+        pricing: config?.pricing,
+      }),
+    );
     const encoder = resolveAnthropicOverride(model, cwd, options.calibrationFile);
+    const pricingOverrides = loadPricingOverrides(cwd, options.pricingFile);
     const results = resolved.map(({ file, input }) => {
       const baseline = baselineStore[relative(cwd, file)];
-      return { file, report: linter.analyze(input, { baseline, encoder }) };
+      return { file, report: linter.analyze(input, { baseline, encoder, pricingOverrides }) };
     });
 
     if (options.write) {
@@ -96,5 +108,7 @@ export async function run(argv: string[], cwd: string): Promise<RunResult> {
   if (argv[0] === "calibrate" && argv[1] === "anthropic" && argv[2] === "run") {
     return runCalibrateRun(argv.slice(3), cwd);
   }
+  if (argv[0] === "pricing" && argv[1] === "show") return runPricingShow(argv.slice(2), cwd);
+  if (argv[0] === "pricing" && argv[1] === "update") return runPricingUpdate(argv.slice(2), cwd);
   return runAnalyze(argv, cwd);
 }

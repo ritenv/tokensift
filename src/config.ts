@@ -1,13 +1,11 @@
 import { analyze } from "./analyze.js";
 import type { Encoder } from "./encoder.js";
+import type { PricingOverride, VolumeOptions } from "./pricing.js";
 import type { Rule } from "./rule.js";
 import { builtinRules } from "./rules/index.js";
 import type { AnalysisInput, Severity } from "./types.js";
 
-export interface VolumeConfig {
-  requestsPerDay?: number;
-  requestsPerMonth?: number;
-}
+export type VolumeConfig = VolumeOptions;
 
 export interface Config {
   model: string;
@@ -17,6 +15,8 @@ export interface Config {
   autofix?: boolean;
   /** declared total token budget, used by the budget-exceeded rule */
   budget?: number;
+  /** per-model price overrides, keyed by exact model id, dollars per million tokens */
+  pricing?: { overrides?: Record<string, PricingOverride> };
 }
 
 export function defineConfig(config: Config): Config {
@@ -38,7 +38,12 @@ export function createLinter(config: Config) {
   return {
     analyze: (
       input: AnalysisInput,
-      overrides?: { baseline?: number; budget?: number; encoder?: Encoder },
+      overrides?: {
+        baseline?: number;
+        budget?: number;
+        encoder?: Encoder;
+        pricingOverrides?: Record<string, PricingOverride>;
+      },
     ) =>
       analyze(input, {
         model: config.model,
@@ -47,6 +52,8 @@ export function createLinter(config: Config) {
         budget: overrides?.budget ?? config.budget,
         baseline: overrides?.baseline,
         encoder: overrides?.encoder,
+        volume: config.volume,
+        pricingOverrides: { ...config.pricing?.overrides, ...overrides?.pricingOverrides },
       }),
   };
 }

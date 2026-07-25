@@ -15,6 +15,7 @@ export interface CliOptions {
   baselineFile?: string;
   updateBaseline: boolean;
   calibrationFile?: string;
+  pricingFile?: string;
 }
 
 const KNOWN_RULE_IDS = new Set(builtinRules.map((r) => r.id));
@@ -57,6 +58,7 @@ export function parseArgs(argv: string[]): CliOptions {
   let baselineFile: string | undefined;
   let updateBaseline = false;
   let calibrationFile: string | undefined;
+  let pricingFile: string | undefined;
   let sawCommand = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -98,6 +100,9 @@ export function parseArgs(argv: string[]): CliOptions {
       case "--calibration-file":
         calibrationFile = requireValue(argv, ++i, "--calibration-file");
         continue;
+      case "--pricing-file":
+        pricingFile = requireValue(argv, ++i, "--pricing-file");
+        continue;
       case "--fix":
         fix = true;
         continue;
@@ -137,5 +142,6 @@ export function parseArgs(argv: string[]): CliOptions {
     baselineFile,
     updateBaseline,
     calibrationFile,
+    pricingFile,
   };
 }

@@ -8,7 +8,13 @@ OpenAI exact counts use gpt-tokenizer for the real o200k_base/cl100k_base BPE ra
 
 ## Cost model
 
-`Finding.cost` is optional for now. There's no pricing table yet, so nothing can compute `perCall`/`atVolume`. Making up numbers here would break the exactness promise. Gets filled in once pricing data is curated.
+`Finding.cost` is populated now: `perCall` is `tokens.saved * inputCostPerToken` for the resolved model, `per1000Calls` is `perCall` at a legible denomination (a fraction of a cent doesn't read as a real number), and `atVolume` is added when `Config.volume` (`requestsPerDay`/`requestsPerMonth`) is set. Pricing data comes from a curated, filtered snapshot of [LiteLLM's pricing table](https://github.com/BerriAI/litellm) (`src/pricing-data.ts`, MIT-licensed, see LICENSE-THIRD-PARTY.md), reduced to just the models `resolveEncoder()` actually resolves — bundling all ~3000 LiteLLM entries would be pure bloat for models this package can't even tokenize.
+
+`report.summary.cost` mirrors the same shape (`perCall`/`per1000Calls`/`atVolume`), summed across every finding in `analyze()` (`aggregateCost()`). `atVolume` on the summary is only set when *every* finding has one, since a partial sum (some findings priced, some not) would silently understate the real total rather than surfacing the gap. Matches spec §4's `report.summary` carrying cost fields, though named to match `Finding.cost`'s shape (`cost: {...}`) rather than the spec's flat `estCostPerCall`/`estCostAtVolume` field names, for consistency with the rest of this codebase's naming (no `est` prefix anywhere else either).
+
+The ingestion is a manual, explicit script (`scripts/update-pricing.mjs`, run via `pnpm pricing:update`), not a build step: pricing data goes stale on its own schedule, unrelated to code releases, so baking a fetch into `build`/`prepublishOnly` would either make releases flaky (network dependency) or silently ship stale numbers forever (if run once and forgotten). Same reasoning as `calibrate anthropic run` staying a separate opt-in command rather than something `analyze` triggers automatically.
+
+`tokensift pricing update` is the end-user-facing equivalent, but deliberately doesn't touch the installed package's bundled data (mutating files inside `node_modules` is fragile and gets wiped on every reinstall). It writes a local `.tokensift/pricing-overrides.json` instead, which `analyze`/`check` prefer over the bundled default per exact model id — the same override-file mechanism `calibrate anthropic run` already uses for calibration data, reused here rather than inventing a second pattern. `Config.pricing.overrides` (per spec §9) is the config-file equivalent, in dollars-per-million-tokens since that's how humans actually think about LLM pricing, converted to per-token internally to match the bundled data's shape.
 
 ## Estimate encoders
 
@@ -35,6 +41,8 @@ Calibration is keyed by exact model id, not provider family, since real per-mode
 ## Repeated-substring engine
 
 The suffix automaton gives occurrence counts in O(n). Turning counts into full occurrence lists means re-scanning the token stream per reported span, O(n) per span instead of O(1). Fine at prompt scale. Would need real work for a token repeated thousands of times in one payload.
+
+`find()` can legitimately return several spans for what a human would call "one repeated line": a boundary word that happens to match at some but not all occurrences produces its own distinct maximal repeat, at genuinely different (overlapping) positions — covered directly by `repeated-substring.test.ts`'s `abcabcabc` case, not a bug in the service. Left as the service's real output on purpose, since other minimum-length thresholds or consumers might want that granularity. `repeated-block` (the only current consumer) dedupes at the rule layer instead: spans are already sorted by wasted-token cost, so a greedy pass keeps the highest-cost span per cluster of overlapping occurrences and drops the rest, so one repeated block produces one finding. Found via a real example (a reminder line repeated 3 times across few-shot examples produced 3 overlapping findings instead of 1) while building the README's flagship example.
 
 ## whitespace-run threshold
 

@@ -35,4 +35,33 @@ describe("repeated-block", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("reports a repeated line once, not once per overlapping-boundary variant", () => {
+    // this reminder repeats 3 times overall, but only 2 of those 3
+    // occurrences are followed by "Example", and only the other 2 have a
+    // leading blank line before them -- so the suffix automaton legitimately
+    // finds three distinct maximal repeats (12-token x3, plus two 13/14-token
+    // variants x2) at overlapping positions. Without dedup this rule used to
+    // report all three as separate findings for what's really one repeated line.
+    const prompt = [
+      "You are a support ticket classifier. Classify each ticket into one of: billing, technical, account.",
+      "Remember to respond with only the category name, nothing else.",
+      "",
+      "Example 1:",
+      'Ticket: "I was charged twice this month"',
+      "Classification: billing",
+      "Remember to respond with only the category name, nothing else.",
+      "",
+      "Example 2:",
+      'Ticket: "I cant reset my password"',
+      "Classification: account",
+      "Remember to respond with only the category name, nothing else.",
+      "",
+      'Ticket 550e8400-e29b-41d4-a716-446655440000, from a customer: "refund please"',
+    ].join("\n");
+
+    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain("repeats 3 times");
+  });
 });
