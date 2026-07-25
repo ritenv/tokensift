@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.9.0
+
+### Minor Changes
+
+- 191216d: Add cost savings to the analysis, fix repeated-block
+
 ## 0.8.1
 
 ### Patch Changes
