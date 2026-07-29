@@ -30,4 +30,15 @@ describe("baseline-regression", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("gives a sensible message for a zero baseline instead of dividing by zero", () => {
+    const report = analyze("hello world this is a real prompt with actual content", {
+      model: "gpt-4o",
+      rules: [baselineRegression],
+      baseline: 0,
+    });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).not.toContain("Infinity");
+    expect(report.findings[0]?.message).toContain("grew from an empty baseline");
+  });
 });

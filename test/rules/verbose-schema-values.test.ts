@@ -49,4 +49,29 @@ describe("verbose-schema-values", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("does not flag a purely character-level accidental prefix with no real word/enum boundary", () => {
+    const labels = ["APPROVED", "APPROXIMATELY_DONE", "APPROXIMATE_MATCH"].map((s, i) => ({
+      id: i,
+      label: s,
+    }));
+    const report = analyze(JSON.stringify(labels), {
+      model: "gpt-4o",
+      rules: [verboseSchemaValues],
+    });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("does not flag a column where one value is identical to the shared prefix itself", () => {
+    // would otherwise suggest collapsing "STATUS" to an empty-string suffix
+    const values = ["STATUS", "STATUS_ACTIVE", "STATUS_INACTIVE"].map((s, i) => ({
+      id: i,
+      status: s,
+    }));
+    const report = analyze(JSON.stringify(values), {
+      model: "gpt-4o",
+      rules: [verboseSchemaValues],
+    });
+    expect(report.findings).toEqual([]);
+  });
 });

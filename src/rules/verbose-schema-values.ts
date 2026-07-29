@@ -17,6 +17,24 @@ function longestCommonPrefix(values: string[]): string {
   return prefix;
 }
 
+const DELIMITER = /[_\- ]/;
+
+// A raw character-level common prefix isn't necessarily a real enum-style boundary --
+// "APPROVED"/"APPROXIMATELY_DONE"/"APPROXIMATE_MATCH" share "APPRO" by pure accident, not
+// because they're members of one enum family. Trimming back to the last delimiter
+// (STATUS_ACTIVE / STATUS_INACTIVE style) inside the raw prefix keeps only genuinely
+// enum-shaped matches; if there's no delimiter at all, this returns "", which the
+// MIN_PREFIX_LEN check below then correctly skips. As a side effect this also prevents a
+// value that's identical to the prefix itself from collapsing to an empty-string suffix
+// (STATUS/STATUS_ACTIVE/STATUS_INACTIVE no longer matches "STATUS" as a bare value, since
+// "STATUS" alone has no trailing delimiter to anchor on).
+function trimToDelimiterBoundary(prefix: string): string {
+  for (let i = prefix.length - 1; i >= 0; i--) {
+    if (DELIMITER.test(prefix[i]!)) return prefix.slice(0, i + 1);
+  }
+  return "";
+}
+
 export const verboseSchemaValues = defineRule({
   id: "verbose-schema-values",
   defaultSeverity: "info",
@@ -30,7 +48,7 @@ export const verboseSchemaValues = defineRule({
         if (!values.every((v): v is string => typeof v === "string")) continue;
         if (new Set(values).size < 2) continue;
 
-        const prefix = longestCommonPrefix(values);
+        const prefix = trimToDelimiterBoundary(longestCommonPrefix(values));
         if (prefix.length < MIN_PREFIX_LEN) continue;
 
         const current = values.reduce(
