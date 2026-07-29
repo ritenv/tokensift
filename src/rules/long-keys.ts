@@ -22,7 +22,7 @@ export const longKeys = defineRule({
       const avgKeyLen = keys.reduce((sum, k) => sum + k.length, 0) / keys.length;
       if (avgKeyLen < MIN_AVG_KEY_LEN) continue;
 
-      const current = ctx.encoder.countTokens(JSON.stringify(region.value));
+      const current = ctx.encoder.countTokens(region.text);
 
       const shortKeyMap = Object.fromEntries(keys.map((k, i) => [k, shortKeyFor(i)]));
       const legend = JSON.stringify(shortKeyMap);

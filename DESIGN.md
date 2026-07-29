@@ -56,6 +56,10 @@ No entropy math. It just checks chars-per-token like `uuid-bloat` does. Real sec
 
 Yeah these overlap. `repeated-block` just finds repeated text, doesn't know about messages. `duplicate-message-content` compares whole messages and tells you which role/index, useful for catching a system prompt that leaked into a user turn. Kept both.
 
+## row-json vs long-keys
+
+Same category of overlap as above. Both fire on the same uniform-row JSON region when it has both long keys and enough rows, and they're two different restructuring *strategies* for the same waste (CSV/columnar vs short-key-plus-legend), not independent savings — a user applies one or the other, never both. `report.summary.totalWasteTokens`/`cost` still sums them additively when both fire, same as the repeated-block/duplicate-message-content case above, so it can overstate total addressable waste on a region both rules flag. Kept both rather than adding cross-rule coordination: rules are independent by design (each only sees its own slice of `AnalysisContext`), and real de-duplication would mean rules knowing about each other's findings, a bigger architectural change for what's a display nuance, not a wrong number on any individual finding.
+
 ## filler lexicon
 
 Small on purpose. Judging tone edges toward judging prompt quality, which we don't do. Can grow this later, maybe make it configurable.

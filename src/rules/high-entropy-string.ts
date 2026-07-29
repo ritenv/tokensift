@@ -4,7 +4,8 @@ import type { Finding } from "../types.js";
 const MIN_LEN = 20;
 const MAX_CHARS_PER_TOKEN = 3;
 const CANDIDATE = /\b[A-Za-z0-9][A-Za-z0-9_-]{19,}[A-Za-z0-9]\b/g;
-const SECRET_PREFIX = /^(sk-|sk_live_|sk_test_|ghp_|gho_|ghs_|AKIA|xox[baprs]-|AIza)/;
+const SECRET_PREFIX =
+  /^(sk-|sk_live_|sk_test_|rk_live_|ghp_|gho_|ghs_|github_pat_|npm_|AKIA|xox[baprs]-|AIza)/;
 const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const WHY =
@@ -23,11 +24,17 @@ export const highEntropyString = defineRule({
       if (CANONICAL_UUID.test(span)) continue;
       const start = match.index;
 
+      // A credential prefix match is already a strong, independent signal -- the entropy
+      // gate exists to stop ordinary identifiers (camelCase, compound words) from firing,
+      // and applying it uniformly ends up suppressing true positives on this rule's own
+      // credential list too (several real formats tokenize efficiently enough to clear
+      // MAX_CHARS_PER_TOKEN despite being genuine leaked secrets). Bypass the gate once the
+      // prefix already told us what this is.
+      const looksLikeSecret = SECRET_PREFIX.test(span);
       const current = ctx.encoder.countTokens(span);
       const charsPerToken = span.length / current;
-      if (charsPerToken > MAX_CHARS_PER_TOKEN) continue;
+      if (!looksLikeSecret && charsPerToken > MAX_CHARS_PER_TOKEN) continue;
 
-      const looksLikeSecret = SECRET_PREFIX.test(span);
       findings.push({
         ruleId: "high-entropy-string",
         severity,

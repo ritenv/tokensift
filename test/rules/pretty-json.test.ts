@@ -32,4 +32,22 @@ describe("pretty-json", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("preserves duplicate keys in the fix instead of collapsing them", () => {
+    const prompt = 'Schema:\n{\n  "status": "active",\n  "status": "inactive"\n}';
+    const report = analyze(prompt, { model: "gpt-4o", rules: [prettyJson] });
+    expect(report.findings[0]?.fix?.replacement).toBe('{"status":"active","status":"inactive"}');
+  });
+
+  it("preserves integers beyond Number.MAX_SAFE_INTEGER exactly in the fix", () => {
+    const prompt = 'Data:\n{\n  "id": 12345678901234567890,\n  "name": "x"\n}';
+    const report = analyze(prompt, { model: "gpt-4o", rules: [prettyJson] });
+    expect(report.findings[0]?.fix?.replacement).toBe('{"id":12345678901234567890,"name":"x"}');
+  });
+
+  it("preserves explicit decimal formatting like 1.0 in the fix", () => {
+    const prompt = 'Value:\n{\n  "price": 1.0,\n  "qty": 2\n}';
+    const report = analyze(prompt, { model: "gpt-4o", rules: [prettyJson] });
+    expect(report.findings[0]?.fix?.replacement).toBe('{"price":1.0,"qty":2}');
+  });
 });

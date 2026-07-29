@@ -20,6 +20,20 @@ function toColumnar(keys: string[], rows: Record<string, unknown>[]): string {
   return JSON.stringify({ keys, rows: rows.map((row) => keys.map((k) => row[k])) });
 }
 
+function isPrimitive(value: unknown): boolean {
+  return value === null || (typeof value !== "object" && typeof value !== "function");
+}
+
+// CSV cells go through String(value), which turns a nested object/array into the literal
+// text "[object Object]" -- not a serialization of its contents. That makes CSV look
+// artificially cheap for exactly the rows it would corrupt, since collapsing every row's
+// distinct nested value down to the same placeholder string costs almost nothing. Columnar
+// JSON round-trips nested values via JSON.stringify instead, so it stays lossless; CSV is
+// only offered as a candidate when every cell is a primitive.
+function hasNestedValues(rows: Record<string, unknown>[], keys: string[]): boolean {
+  return rows.some((row) => keys.some((key) => !isPrimitive(row[key])));
+}
+
 export const rowJson = defineRule({
   id: "row-json",
   defaultSeverity: "warn",
@@ -28,17 +42,17 @@ export const rowJson = defineRule({
     const findings: Finding[] = [];
 
     for (const { region, rows, keys } of findUniformObjectArrays(ctx.jsonRegions)) {
-      const current = ctx.encoder.countTokens(JSON.stringify(region.value));
+      const current = ctx.encoder.countTokens(region.text);
 
       const columnar = toColumnar(keys, rows);
-      const csv = toCsv(keys, rows);
       const columnarTokens = ctx.encoder.countTokens(columnar);
-      const csvTokens = ctx.encoder.countTokens(csv);
+      let best = { label: "columnar JSON", tokens: columnarTokens };
 
-      const best =
-        csvTokens <= columnarTokens
-          ? { label: "CSV", tokens: csvTokens }
-          : { label: "columnar JSON", tokens: columnarTokens };
+      if (!hasNestedValues(rows, keys)) {
+        const csv = toCsv(keys, rows);
+        const csvTokens = ctx.encoder.countTokens(csv);
+        if (csvTokens <= columnarTokens) best = { label: "CSV", tokens: csvTokens };
+      }
       if (best.tokens >= current) continue;
 
       const [start, end] = region.range;

@@ -34,6 +34,7 @@ export const unicodePunct = defineRule({
 
       const current = ctx.encoder.countTokens(char);
       const afterFix = replacement ? ctx.encoder.countTokens(replacement) : 0;
+      if (current <= afterFix) continue;
 
       findings.push({
         ruleId: "unicode-punct",

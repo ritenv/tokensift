@@ -48,11 +48,11 @@ describe("run", () => {
   it("--fix --write rewrites a real file on disk", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-cli-"));
     const file = join(scratchDir, "prompt.md");
-    writeFileSync(file, "the customer said “it’s broken”");
+    writeFileSync(file, "the customer said hello​world");
 
     const result = await run([file, "--model", "gpt-4o", "--fix", "--write"], scratchDir);
     expect(result.exitCode).toBe(0);
-    expect(readFileSync(file, "utf8")).toBe('the customer said "it\'s broken"');
+    expect(readFileSync(file, "utf8")).toBe("the customer said helloworld");
   });
 
   it("fails the whole run upfront when --write hits a JSON input, before writing anything", async () => {

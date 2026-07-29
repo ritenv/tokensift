@@ -29,4 +29,22 @@ describe("redundant-structure", () => {
     const report = analyze(JSON.stringify(order), { model: "gpt-4o", rules: [redundantStructure] });
     expect(report.findings).toEqual([]);
   });
+
+  it("flags the same data duplicated with reordered object keys", () => {
+    const prompt = 'First: {"a":1,"b":2,"c":3}\nSecond: {"c":3,"b":2,"a":1}';
+    const report = analyze(prompt, { model: "gpt-4o", rules: [redundantStructure] });
+    expect(report.findings).toHaveLength(1);
+  });
+
+  it("flags reordered keys at a nested level too", () => {
+    const prompt = 'First: {"a":1,"nested":{"x":1,"y":2}}\nSecond: {"nested":{"y":2,"x":1},"a":1}';
+    const report = analyze(prompt, { model: "gpt-4o", rules: [redundantStructure] });
+    expect(report.findings).toHaveLength(1);
+  });
+
+  it("does not treat reordered array elements as duplicates, array order is meaningful", () => {
+    const prompt = "First: [1,2,3]\nSecond: [3,2,1]";
+    const report = analyze(prompt, { model: "gpt-4o", rules: [redundantStructure] });
+    expect(report.findings).toEqual([]);
+  });
 });
