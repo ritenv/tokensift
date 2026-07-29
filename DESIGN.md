@@ -46,7 +46,9 @@ The suffix automaton gives occurrence counts in O(n). Turning counts into full o
 
 ## whitespace-run threshold
 
-o200k_base merges long runs of spaces or newlines into a single token, so short runs are basically free. `whitespace-run` only fires when collapsing the run actually saves tokens, not just whenever it looks messy.
+o200k_base merges long runs of spaces or newlines into a single token, so short runs are basically free. `whitespace-run` only fires when collapsing the run actually saves tokens, not just whenever it looks messy. In practice this means mid-line and blank-line runs rarely trip on realistic input at all (measured: a run needs ~100+ characters before it costs more than 1 token on either o200k_base or cl100k_base) — the rule is behaving correctly, not broken, but "collapse the run" undersells how narrow the real hit rate is.
+
+Code-fence protection is real, not incidental: `findCodeFenceRanges()` pairs up ``` markers and skips any hit whose start falls inside one (an unclosed trailing fence conservatively extends to the end of the text). This used to be unimplemented — the spec's rule table promised it, but nothing in the rule actually checked for fences, and it only looked safe because whitespace runs almost never had real savings inside real code to begin with. A longer run genuinely costing extra tokens inside a fence would have been rewritten in place before this fix.
 
 ## high-entropy-string
 

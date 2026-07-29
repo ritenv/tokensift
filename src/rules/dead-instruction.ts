@@ -9,6 +9,14 @@ const REFERS_EXAMPLES = /\b(?:the|these|those)\s+examples?\s+(?:above|below|prov
 
 const CODE_FENCE = /```/;
 
+// Checking the whole document for "does *something* structurally JSON- or fence-shaped
+// exist anywhere" (rather than plausibly near this specific reference) meant any JSON block
+// or code fence anywhere in a long prompt silently defeated detection everywhere else in it,
+// same for any other unrelated use of the word "example". A proximity window keeps this rule
+// cheap and conservative (still no real reference resolution) while no longer being fooled by
+// content far away that the instruction can't plausibly be pointing at.
+const PROXIMITY_WINDOW = 300;
+
 const WHY =
   "an instruction that points at a structure ('as shown above', 'the examples below') costs tokens and confuses the model when that structure doesn't actually exist, usually a template-assembly bug";
 
@@ -16,21 +24,25 @@ function hasStructureBefore(
   ctx: { text: string; jsonRegions: { range: [number, number] }[] },
   index: number,
 ): boolean {
-  if (ctx.jsonRegions.some((r) => r.range[1] <= index)) return true;
-  return CODE_FENCE.test(ctx.text.slice(0, index));
+  const windowStart = Math.max(0, index - PROXIMITY_WINDOW);
+  if (ctx.jsonRegions.some((r) => r.range[1] <= index && r.range[1] > windowStart)) return true;
+  return CODE_FENCE.test(ctx.text.slice(windowStart, index));
 }
 
 function hasStructureAfter(
   ctx: { text: string; jsonRegions: { range: [number, number] }[] },
   index: number,
 ): boolean {
-  if (ctx.jsonRegions.some((r) => r.range[0] >= index)) return true;
-  return CODE_FENCE.test(ctx.text.slice(index));
+  const windowEnd = Math.min(ctx.text.length, index + PROXIMITY_WINDOW);
+  if (ctx.jsonRegions.some((r) => r.range[0] >= index && r.range[0] < windowEnd)) return true;
+  return CODE_FENCE.test(ctx.text.slice(index, windowEnd));
 }
 
 function countOtherExampleMentions(text: string, start: number, end: number): number {
-  const before = text.slice(0, start);
-  const after = text.slice(end);
+  const windowStart = Math.max(0, start - PROXIMITY_WINDOW);
+  const windowEnd = Math.min(text.length, end + PROXIMITY_WINDOW);
+  const before = text.slice(windowStart, start);
+  const after = text.slice(end, windowEnd);
   const matches =
     (before.match(/\bexamples?\b/gi)?.length ?? 0) + (after.match(/\bexamples?\b/gi)?.length ?? 0);
   return matches;

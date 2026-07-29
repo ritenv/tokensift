@@ -50,4 +50,31 @@ describe("whitespace-run", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("does not touch whitespace inside a fenced code block", () => {
+    const report = analyze(
+      `Example:\n\`\`\`js\nconst x = 1;${" ".repeat(80)}\nconst y = 2;\n\`\`\``,
+      {
+        model: "gpt-4o",
+        rules: [whitespaceRun],
+      },
+    );
+    expect(report.findings).toEqual([]);
+  });
+
+  it("still flags the same whitespace run outside a code fence, as a control", () => {
+    const report = analyze(`const x = 1;${" ".repeat(80)}\nconst y = 2;`, {
+      model: "gpt-4o",
+      rules: [whitespaceRun],
+    });
+    expect(report.findings.length).toBeGreaterThan(0);
+  });
+
+  it("treats everything after an unclosed fence marker as code, conservatively", () => {
+    const report = analyze(`\`\`\`js\nunclosed fence${" ".repeat(80)}\n`, {
+      model: "gpt-4o",
+      rules: [whitespaceRun],
+    });
+    expect(report.findings).toEqual([]);
+  });
 });
