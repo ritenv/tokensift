@@ -42,7 +42,7 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(1);
   });
 
-  it("does not double-count totalWasteTokens when two rules claim savings on overlapping ranges", () => {
+  it("does not double-count totalWasteTokens when two rules claim savings on the exact same range", () => {
     const makeOverlapRule = (id: string, saved: number): Rule => ({
       id,
       defaultSeverity: "info",
@@ -101,6 +101,36 @@ describe("analyze", () => {
     });
 
     expect(report.summary.totalWasteTokens).toBe(25);
+  });
+
+  it("sums totalWasteTokens for a narrow fix nested inside a broader one, since they're composable, not alternatives", () => {
+    const makeRule = (id: string, range: [number, number], saved: number): Rule => ({
+      id,
+      defaultSeverity: "info",
+      why: "test fixture rule",
+      check(ctx, severity) {
+        return [
+          {
+            ruleId: id,
+            severity,
+            message: id,
+            why: "test fixture rule",
+            loc: { input: ctx.inputRef, range },
+            tokens: { current: saved + 1, afterFix: 1, saved },
+            confidence: "exact",
+          },
+        ];
+      },
+    });
+
+    // e.g. row-json restructuring a whole array (range [0, 100]) and digit-fragmentation
+    // shortening one timestamp nested inside it (range [10, 20]) -- a user can apply both.
+    const report = analyze("a region with a nested sub-region inside it, long enough", {
+      model: "gpt-4o",
+      rules: [makeRule("outer-rule", [0, 100], 1000), makeRule("inner-rule", [10, 20], 50)],
+    });
+
+    expect(report.summary.totalWasteTokens).toBe(1050);
   });
 
   it("returns no findings when no rules are configured", () => {

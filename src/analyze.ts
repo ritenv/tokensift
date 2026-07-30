@@ -121,29 +121,22 @@ function normalize(input: AnalysisInput): Normalized {
   return { text, inputRef: { kind: "payload" }, messages, slots: [] };
 }
 
-// several rules can claim savings on the same region (pretty-json + row-json on one JSON
-// blob, say), but a user applies one restructuring, not all of them -- sum only the largest
-// claim per cluster of overlapping loc.range, not every finding's saved count
-function sumNonOverlappingSavings(findings: Finding[]): number {
-  const withSavings = findings.filter((f) => f.tokens.saved > 0);
-  if (withSavings.length === 0) return 0;
-
-  const sorted = [...withSavings].sort((a, b) => a.loc.range[0] - b.loc.range[0]);
-  let total = 0;
-  let clusterEnd = Number.NEGATIVE_INFINITY;
-  let clusterMax = 0;
-  for (const f of sorted) {
-    const [start, end] = f.loc.range;
-    if (start < clusterEnd) {
-      clusterEnd = Math.max(clusterEnd, end);
-      clusterMax = Math.max(clusterMax, f.tokens.saved);
-    } else {
-      total += clusterMax;
-      clusterEnd = end;
-      clusterMax = f.tokens.saved;
-    }
+// several rules can claim savings on the exact same region (pretty-json + row-json on one
+// JSON blob, say), but a user applies one restructuring, not all of them -- dedupe by keeping
+// only the largest claim per distinct range. Deliberately exact-range, not any-overlap: a
+// narrow fix nested inside a larger region (digit-fragmentation on one timestamp inside a
+// row-json'd array) is composable with the outer fix, not an alternative to it, so it keeps
+// its own range and gets summed normally rather than swallowed by the bigger claim.
+function sumSavingsDedupedByExactRange(findings: Finding[]): number {
+  const maxByRange = new Map<string, number>();
+  for (const f of findings) {
+    if (f.tokens.saved <= 0) continue;
+    const key = `${f.loc.range[0]}:${f.loc.range[1]}`;
+    const existing = maxByRange.get(key) ?? 0;
+    if (f.tokens.saved > existing) maxByRange.set(key, f.tokens.saved);
   }
-  total += clusterMax;
+  let total = 0;
+  for (const saved of maxByRange.values()) total += saved;
   return total;
 }
 
@@ -187,7 +180,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     (sum, slot) => sum + encoder.countTokens(slot.sample ?? ""),
     0,
   );
-  const totalWasteTokens = sumNonOverlappingSavings(findings);
+  const totalWasteTokens = sumSavingsDedupedByExactRange(findings);
 
   function applyFixes(options: ApplyFixesOptions = {}): string {
     const fixes = findings
