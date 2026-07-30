@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.11.0
+
+### Minor Changes
+
+- a72d068: Improve accuracy of multiple rules
+
 ## 0.10.0
 
 ### Minor Changes
