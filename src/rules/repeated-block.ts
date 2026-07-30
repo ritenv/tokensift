@@ -1,5 +1,5 @@
 import { defineRule } from "../rule.js";
-import type { Finding, RepeatedSpan } from "../types.js";
+import type { Finding, JsonRegion, RepeatedSpan } from "../types.js";
 
 const MIN_TOKENS = 8;
 
@@ -12,6 +12,20 @@ function rangesOverlap(a: [number, number], b: [number, number]): boolean {
 
 function occurrencesOverlap(a: RepeatedSpan, b: RepeatedSpan): boolean {
   return a.occurrences.some((oa) => b.occurrences.some((ob) => rangesOverlap(oa, ob)));
+}
+
+function containedIn(range: [number, number], region: JsonRegion): boolean {
+  return range[0] >= region.range[0] && range[1] <= region.range[1];
+}
+
+// A repeated span whose every occurrence sits fully inside the same JSON region is almost
+// always a structural artifact -- a repeated key name, quote, or punctuation fragment that
+// naturally recurs across sibling array elements or object entries (see row-json/long-keys,
+// which already target that structural overhead). "State this block once and refer back to
+// it" doesn't make sense applied to a JSON syntax fragment, so those spans are dropped here
+// rather than surfaced as their own finding.
+function isJsonStructuralArtifact(span: RepeatedSpan, jsonRegions: JsonRegion[]): boolean {
+  return span.occurrences.every((occ) => jsonRegions.some((r) => containedIn(occ, r)));
 }
 
 // find() can legitimately report several spans for the same underlying
@@ -40,6 +54,8 @@ export const repeatedBlock = defineRule({
     const findings: Finding[] = [];
 
     for (const span of dedupeOverlapping(ctx.repeated.find(MIN_TOKENS))) {
+      if (isJsonStructuralArtifact(span, ctx.jsonRegions)) continue;
+
       const lenTokens = ctx.encoder.countTokens(span.text);
       const current = lenTokens * span.occurrences.length;
       const afterFix = lenTokens;

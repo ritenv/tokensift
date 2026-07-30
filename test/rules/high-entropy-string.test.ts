@@ -90,4 +90,21 @@ describe("high-entropy-string", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("does not flag a SCREAMING_SNAKE_CASE enum/status value", () => {
+    const report = analyze("stage: PAYMENT_PROCESSING_FAILED_AWAITING_MANUAL_REVIEW", {
+      model: "gpt-4o",
+      rules: [highEntropyString],
+    });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("still flags a credential-prefixed value even if it happens to be all-caps snake case", () => {
+    const report = analyze("token: AKIA_Q7M2K9X4P1V8R3N6T0W5Y2C8J4H1S9D6F3G0A7Z5", {
+      model: "gpt-4o",
+      rules: [highEntropyString],
+    });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain("credential");
+  });
 });

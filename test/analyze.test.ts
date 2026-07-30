@@ -42,6 +42,67 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(1);
   });
 
+  it("does not double-count totalWasteTokens when two rules claim savings on overlapping ranges", () => {
+    const makeOverlapRule = (id: string, saved: number): Rule => ({
+      id,
+      defaultSeverity: "info",
+      why: "test fixture rule",
+      check(ctx, severity) {
+        return [
+          {
+            ruleId: id,
+            severity,
+            message: `${id} claims ${saved}`,
+            why: "test fixture rule",
+            loc: { input: ctx.inputRef, range: [0, 10] },
+            tokens: { current: saved + 1, afterFix: 1, saved },
+            confidence: "exact",
+          },
+        ];
+      },
+    });
+
+    const report = analyze("some overlapping json region here", {
+      model: "gpt-4o",
+      rules: [makeOverlapRule("rule-a", 30), makeOverlapRule("rule-b", 50)],
+    });
+
+    expect(report.findings).toHaveLength(2);
+    // both findings independently report their own real savings...
+    expect(report.findings[0]?.tokens.saved).toBe(30);
+    expect(report.findings[1]?.tokens.saved).toBe(50);
+    // ...but the aggregate only counts the larger overlapping claim once, not 30 + 50.
+    expect(report.summary.totalWasteTokens).toBe(50);
+  });
+
+  it("sums totalWasteTokens across findings whose ranges don't overlap", () => {
+    const makeRule = (id: string, range: [number, number], saved: number): Rule => ({
+      id,
+      defaultSeverity: "info",
+      why: "test fixture rule",
+      check(ctx, severity) {
+        return [
+          {
+            ruleId: id,
+            severity,
+            message: id,
+            why: "test fixture rule",
+            loc: { input: ctx.inputRef, range },
+            tokens: { current: saved + 1, afterFix: 1, saved },
+            confidence: "exact",
+          },
+        ];
+      },
+    });
+
+    const report = analyze("some non overlapping regions in this text here", {
+      model: "gpt-4o",
+      rules: [makeRule("rule-a", [0, 5], 10), makeRule("rule-b", [20, 25], 15)],
+    });
+
+    expect(report.summary.totalWasteTokens).toBe(25);
+  });
+
   it("returns no findings when no rules are configured", () => {
     const report = analyze("anything at all", { model: "gpt-4o" });
     expect(report.findings).toEqual([]);
