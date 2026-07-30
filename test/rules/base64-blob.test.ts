@@ -39,4 +39,39 @@ describe("base64-blob", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("flags a base64 blob immediately adjacent to underscores", () => {
+    const realistic =
+      "SGVsbG8gV29ybGQhIFRoaXMgaXMgYSB0ZXN0IG9mIGJhc2U2NCBlbmNvZGluZyB3aXRoIG1peGVkIGNhc2UgbGV0dGVycyBRV0VSVFlVSU9QQVNERkdISktMWkNWQk5N";
+    const report = analyze(`img_${realistic}_end`, { model: "gpt-4o", rules: [base64Blob] });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain("128 chars");
+  });
+
+  it("flags a real JWT as a single finding, not fragmented per segment", () => {
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+    const report = analyze(`Authorization: Bearer ${jwt}`, {
+      model: "gpt-4o",
+      rules: [base64Blob],
+    });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain(`${jwt.length} chars`);
+  });
+
+  it("does not flag a long dotted package name as base64url", () => {
+    const report = analyze(
+      "import com.example.longcompanyname.applicationnamemodule.internalfeature;",
+      { model: "gpt-4o", rules: [base64Blob] },
+    );
+    expect(report.findings).toEqual([]);
+  });
+
+  it("does not flag a long dotted subdomain chain as base64url", () => {
+    const report = analyze(
+      "host: api-gateway-service.internal-production-cluster.mycompanyname.example",
+      { model: "gpt-4o", rules: [base64Blob] },
+    );
+    expect(report.findings).toEqual([]);
+  });
 });

@@ -42,4 +42,34 @@ describe("findJsonRegions", () => {
     const [from, to] = region!.range;
     expect(text.slice(from, to)).toBe('{"x": 1}');
   });
+
+  it("does not treat a markdown checkbox as an empty JSON array", () => {
+    const text = "- [ ] first task\n- [ ] second task\n- [x] done task";
+    expect(findJsonRegions(text)).toEqual([]);
+  });
+
+  it("skips an empty object literal", () => {
+    const text = "config: {} (defaults apply)";
+    expect(findJsonRegions(text)).toEqual([]);
+  });
+
+  it("tolerates a literal unescaped newline inside a string value", () => {
+    const text = '{"note": "line one\nline two"}';
+    const regions = findJsonRegions(text);
+    expect(regions).toHaveLength(1);
+    expect(regions[0]?.value).toEqual({ note: "line one\nline two" });
+    expect(regions[0]?.text).toBe(text);
+  });
+
+  it("still skips text that isn't JSON even after the newline-tolerant retry", () => {
+    const text = '{not: "valid\njson"}';
+    expect(findJsonRegions(text)).toEqual([]);
+  });
+
+  it("still finds a non-empty array next to an empty one", () => {
+    const text = 'seen: [], results: [{"id": 1}]';
+    const regions = findJsonRegions(text);
+    expect(regions).toHaveLength(1);
+    expect(regions[0]?.value).toEqual([{ id: 1 }]);
+  });
 });

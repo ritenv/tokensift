@@ -1,4 +1,5 @@
 import { defineRule } from "../rule.js";
+import { minifyJsonText } from "../services/json-minify.js";
 import type { Finding } from "../types.js";
 
 const WHY =
@@ -14,7 +15,7 @@ export const prettyJson = defineRule({
     const findings: Finding[] = [];
 
     for (const region of ctx.jsonRegions) {
-      const minified = JSON.stringify(region.value);
+      const minified = minifyJsonText(region.text);
       if (minified === region.text) continue;
 
       const current = ctx.encoder.countTokens(region.text);

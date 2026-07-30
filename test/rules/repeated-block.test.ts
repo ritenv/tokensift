@@ -64,4 +64,28 @@ describe("repeated-block", () => {
     expect(report.findings).toHaveLength(1);
     expect(report.findings[0]?.message).toContain("repeats 3 times");
   });
+
+  it("does not flag a repeated JSON key/punctuation fragment across array rows", () => {
+    const prompt = JSON.stringify({
+      results: [
+        { id: 1, title: "Perplexity valuation reaches new high", url: "https://a.example.com/1" },
+        { id: 2, title: "Perplexity spaces launch", url: "https://a.example.com/2" },
+        { id: 3, title: "Perplexity enterprise adoption doubles", url: "https://a.example.com/3" },
+      ],
+    });
+
+    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("still flags a genuinely repeated value that appears both inside and outside JSON", () => {
+    const prompt = [
+      JSON.stringify({ created_by: "priya.nataraj@acmecorp.example.com" }),
+      "New question from priya.nataraj@acmecorp.example.com: what's the total spend?",
+    ].join("\n");
+
+    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.findings[0]?.message).toContain("repeats 2 times");
+  });
 });

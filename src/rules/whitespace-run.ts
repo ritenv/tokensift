@@ -22,12 +22,31 @@ function collect(text: string, pattern: RegExp, replacement: (match: string) => 
   return hits;
 }
 
+const FENCE = /```/g;
+
+// an unclosed trailing fence conservatively extends to the end of the text
+function findCodeFenceRanges(text: string): [number, number][] {
+  const positions = [...text.matchAll(FENCE)].map((m) => m.index);
+  const ranges: [number, number][] = [];
+  for (let i = 0; i < positions.length; i += 2) {
+    const start = positions[i]!;
+    const end = i + 1 < positions.length ? positions[i + 1]! + 3 : text.length;
+    ranges.push([start, end]);
+  }
+  return ranges;
+}
+
+function insideAnyRange(pos: number, ranges: [number, number][]): boolean {
+  return ranges.some(([start, end]) => pos >= start && pos < end);
+}
+
 export const whitespaceRun = defineRule({
   id: "whitespace-run",
   defaultSeverity: "warn",
   why: WHY,
   check(ctx, severity) {
     const findings: Finding[] = [];
+    const fences = findCodeFenceRanges(ctx.text);
 
     const hits = [
       ...collect(ctx.text, TRAILING, () => ""),
@@ -36,6 +55,7 @@ export const whitespaceRun = defineRule({
     ].sort((a, b) => a.start - b.start);
 
     for (const hit of hits) {
+      if (insideAnyRange(hit.start, fences)) continue;
       const run = ctx.text.slice(hit.start, hit.end);
       const current = ctx.encoder.countTokens(run);
       const afterFix = hit.replacement ? ctx.encoder.countTokens(hit.replacement) : 0;

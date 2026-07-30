@@ -1,5 +1,5 @@
 import { defineRule } from "../rule.js";
-import type { Finding, RepeatedSpan } from "../types.js";
+import type { Finding, JsonRegion, RepeatedSpan } from "../types.js";
 
 const MIN_TOKENS = 8;
 
@@ -12,6 +12,16 @@ function rangesOverlap(a: [number, number], b: [number, number]): boolean {
 
 function occurrencesOverlap(a: RepeatedSpan, b: RepeatedSpan): boolean {
   return a.occurrences.some((oa) => b.occurrences.some((ob) => rangesOverlap(oa, ob)));
+}
+
+function containedIn(range: [number, number], region: JsonRegion): boolean {
+  return range[0] >= region.range[0] && range[1] <= region.range[1];
+}
+
+// a span fully inside JSON on every occurrence is usually a repeated key/punctuation
+// fragment, not real reusable content -- row-json/long-keys already cover that overhead
+function isJsonStructuralArtifact(span: RepeatedSpan, jsonRegions: JsonRegion[]): boolean {
+  return span.occurrences.every((occ) => jsonRegions.some((r) => containedIn(occ, r)));
 }
 
 // find() can legitimately report several spans for the same underlying
@@ -40,6 +50,8 @@ export const repeatedBlock = defineRule({
     const findings: Finding[] = [];
 
     for (const span of dedupeOverlapping(ctx.repeated.find(MIN_TOKENS))) {
+      if (isJsonStructuralArtifact(span, ctx.jsonRegions)) continue;
+
       const lenTokens = ctx.encoder.countTokens(span.text);
       const current = lenTokens * span.occurrences.length;
       const afterFix = lenTokens;

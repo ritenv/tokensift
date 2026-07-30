@@ -24,7 +24,7 @@ describe("createLinter", () => {
 
   it("turns off autofix via config", () => {
     const linter = createLinter(defineConfig({ model: "gpt-4o", autofix: false }));
-    const report = linter.analyze('the customer said "it’s broken"');
+    const report = linter.analyze("the customer said hello​world");
     expect(report.findings.length).toBeGreaterThan(0);
     expect(report.findings.every((f) => f.fix === undefined)).toBe(true);
   });

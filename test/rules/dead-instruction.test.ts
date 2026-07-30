@@ -38,4 +38,22 @@ describe("dead-instruction", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("flags a dead 'as shown above' even when unrelated JSON exists far earlier in the prompt", () => {
+    const prompt = `Config:\n${JSON.stringify({ a: 1 })}\n\n${"irrelevant filler ".repeat(30)}\n\nNow respond as shown above.`;
+    const report = analyze(prompt, { model: "gpt-4o", rules: [deadInstruction] });
+    expect(report.findings).toHaveLength(1);
+  });
+
+  it("flags a dead 'the examples provided' even when the word 'example' is used unrelatedly far away", () => {
+    const prompt = `For example, consider edge cases carefully.\n\n${"filler text here ".repeat(20)}\n\nNow classify using the examples provided.`;
+    const report = analyze(prompt, { model: "gpt-4o", rules: [deadInstruction] });
+    expect(report.findings).toHaveLength(1);
+  });
+
+  it("flags a dead 'as shown below' even when a stray code-fence mention exists far away", () => {
+    const prompt = `Respond as shown below. ${"filler ".repeat(40)}By the way, to start a code block you would type \`\`\` then code then \`\`\` to close it.`;
+    const report = analyze(prompt, { model: "gpt-4o", rules: [deadInstruction] });
+    expect(report.findings).toHaveLength(1);
+  });
 });

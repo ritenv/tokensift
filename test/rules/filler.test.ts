@@ -34,4 +34,16 @@ describe("filler", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("points loc.range at the first hit only, not a span covering unrelated content between hits", () => {
+    const first = "I was wondering if you could help.";
+    const filling = "unrelated content ".repeat(50);
+    const second = "Also, if you don't mind, one more thing.";
+    const text = `${first}\n\n${filling}\n\n${second}`;
+
+    const report = analyze(text, { model: "gpt-4o", rules: [filler] });
+    const [start, end] = report.findings[0]!.loc.range;
+    expect(text.slice(start, end)).toBe("I was wondering if you could");
+    expect(end - start).toBeLessThan(first.length + 5);
+  });
 });

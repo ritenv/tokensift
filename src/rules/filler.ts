@@ -45,15 +45,16 @@ export const filler = defineRule({
       (sum, hit) => sum + ctx.encoder.countTokens(ctx.text.slice(hit.start, hit.end)),
       0,
     );
+    // loc only has room for one range; pointing at the first hit rather than spanning
+    // first-to-last avoids engulfing everything between scattered hits in a long prompt
     const first = hits[0]!;
-    const last = hits[hits.length - 1]!;
 
     const finding: Finding = {
       ruleId: "filler",
       severity,
       message: `${hits.length} filler phrase${hits.length > 1 ? "s" : ""} cost ${current} tokens with no instruction content`,
       why: WHY,
-      loc: { input: ctx.inputRef, range: [first.start, last.end] },
+      loc: { input: ctx.inputRef, range: [first.start, first.end] },
       tokens: { current, afterFix: 0, saved: current },
       suggestion: "state the request directly, drop the hedging",
       confidence: ctx.encoder.mode,

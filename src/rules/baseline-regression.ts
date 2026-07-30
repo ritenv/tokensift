@@ -16,13 +16,17 @@ export const baselineRegression = defineRule({
     const threshold = Math.ceil(ctx.baseline * (1 + TOLERANCE_PCT / 100));
     if (current <= threshold) return [];
 
-    const growthPct = (((current - ctx.baseline) / ctx.baseline) * 100).toFixed(1);
+    // avoids a real "up Infinity%" message when the baseline was recorded against an empty file
+    const growth =
+      ctx.baseline === 0
+        ? "grew from an empty baseline"
+        : `up ${(((current - ctx.baseline) / ctx.baseline) * 100).toFixed(1)}% from a baseline of ${ctx.baseline}`;
 
     return [
       {
         ruleId: "baseline-regression",
         severity,
-        message: `input uses ${current} tokens, up ${growthPct}% from a baseline of ${ctx.baseline} (tolerance is ${TOLERANCE_PCT}%)`,
+        message: `input uses ${current} tokens, ${growth} (tolerance is ${TOLERANCE_PCT}%)`,
         why: WHY,
         loc: { input: ctx.inputRef, range: [0, ctx.text.length] },
         tokens: { current, afterFix: ctx.baseline, saved: current - ctx.baseline },

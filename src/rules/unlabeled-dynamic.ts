@@ -6,8 +6,10 @@ const MIN_TOKENS = 30;
 const WHY =
   "a large embedded JSON region that isn't marked with dyn() gets counted as static cost even when it's really per-request data; that breaks the static/dynamic split and cache-alignment accuracy";
 
-function coveredBySlot(range: [number, number], slots: { range: [number, number] }[]): boolean {
-  return slots.some((slot) => range[0] >= slot.range[0] && range[1] <= slot.range[1]);
+// any overlap counts, not just full containment: a static skeleton wrapping a dyn()-marked
+// field only partially overlaps the slot but the author already dealt with it correctly
+function overlapsSlot(range: [number, number], slots: { range: [number, number] }[]): boolean {
+  return slots.some((slot) => range[0] < slot.range[1] && slot.range[0] < range[1]);
 }
 
 export const unlabeledDynamic = defineRule({
@@ -18,7 +20,7 @@ export const unlabeledDynamic = defineRule({
     const findings: Finding[] = [];
 
     for (const region of ctx.jsonRegions) {
-      if (coveredBySlot(region.range, ctx.slots)) continue;
+      if (overlapsSlot(region.range, ctx.slots)) continue;
 
       const current = ctx.encoder.countTokens(region.text);
       if (current < MIN_TOKENS) continue;

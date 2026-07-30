@@ -36,4 +36,30 @@ describe("digit-fragmentation", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("suggests epoch milliseconds, not truncated epoch seconds, when the timestamp has sub-second precision", () => {
+    const report = analyze("logged_at: 2024-01-15T10:30:45.123Z", {
+      model: "gpt-4o",
+      rules: [digitFragmentation],
+    });
+    expect(report.findings[0]?.message).toContain("epoch milliseconds");
+    expect(report.findings[0]?.message).toContain("1705314645123");
+  });
+
+  it("does not flag an invalid calendar date that Date.parse would otherwise silently roll over", () => {
+    // February never has a 30th; Date.parse rolls this to March 1st instead of rejecting it
+    const report = analyze("logged_at: 2024-02-30T10:30:45Z", {
+      model: "gpt-4o",
+      rules: [digitFragmentation],
+    });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("does not flag an out-of-range hour", () => {
+    const report = analyze("logged_at: 2024-01-15T25:30:45Z", {
+      model: "gpt-4o",
+      rules: [digitFragmentation],
+    });
+    expect(report.findings).toEqual([]);
+  });
 });

@@ -42,4 +42,24 @@ describe("row-json", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("measures current cost from the real (pretty-printed) text, not a minified reserialization", () => {
+    const pretty = JSON.stringify(rows, null, 2);
+    const prompt = `here are the open tickets:\n${pretty}\nsummarize them`;
+    const report = analyze(prompt, { model: "gpt-4o", rules: [rowJson] });
+    const finding = report.findings[0]!;
+    const realTextTokens = analyze(pretty, { model: "gpt-4o", rules: [] }).summary.totalTokens;
+    expect(finding.tokens.current).toBe(realTextTokens);
+  });
+
+  it("never suggests CSV when a row has a nested object value, since CSV would silently collapse it", () => {
+    const nestedRows = [
+      { id: 1, name: "Alice", meta: { dept: "eng", level: 3 } },
+      { id: 2, name: "Bob", meta: { dept: "sales", level: 2 } },
+      { id: 3, name: "Carol", meta: { dept: "eng", level: 1 } },
+    ];
+    const report = analyze(JSON.stringify(nestedRows), { model: "gpt-4o", rules: [rowJson] });
+    expect(report.findings[0]?.message).toContain("columnar JSON");
+    expect(report.findings[0]?.message).not.toContain("CSV");
+  });
 });

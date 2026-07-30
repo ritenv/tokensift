@@ -4,6 +4,24 @@ import type { Finding } from "../types.js";
 const WHY =
   "the same data serialized twice still costs tokens twice, even if one copy is reformatted (pretty vs minified, reordered keys); repeated-block only catches byte-identical repeats";
 
+// sorts object keys recursively (array order stays, it's usually semantic) so two objects
+// with identical data but different key order produce the same signature
+function canonicalSignature(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalSignature).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.keys(value as Record<string, unknown>)
+      .sort()
+      .map(
+        (key) =>
+          `${JSON.stringify(key)}:${canonicalSignature((value as Record<string, unknown>)[key])}`,
+      );
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 export const redundantStructure = defineRule({
   id: "redundant-structure",
   defaultSeverity: "info",
@@ -13,7 +31,7 @@ export const redundantStructure = defineRule({
     const seen = new Map<string, number>();
 
     for (const region of ctx.jsonRegions) {
-      const signature = JSON.stringify(region.value);
+      const signature = canonicalSignature(region.value);
       const firstIndex = seen.get(signature);
       if (firstIndex === undefined) {
         seen.set(signature, region.range[0]);

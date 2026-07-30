@@ -17,6 +17,18 @@ function longestCommonPrefix(values: string[]): string {
   return prefix;
 }
 
+const DELIMITER = /[_\- ]/;
+
+// a raw character-level common prefix isn't necessarily an enum boundary --
+// "APPROVED"/"APPROXIMATE_MATCH" share "APPRO" by accident -- so trim back to the last
+// delimiter (STATUS_ACTIVE style); no delimiter at all returns "", skipped by MIN_PREFIX_LEN
+function trimToDelimiterBoundary(prefix: string): string {
+  for (let i = prefix.length - 1; i >= 0; i--) {
+    if (DELIMITER.test(prefix[i]!)) return prefix.slice(0, i + 1);
+  }
+  return "";
+}
+
 export const verboseSchemaValues = defineRule({
   id: "verbose-schema-values",
   defaultSeverity: "info",
@@ -30,7 +42,7 @@ export const verboseSchemaValues = defineRule({
         if (!values.every((v): v is string => typeof v === "string")) continue;
         if (new Set(values).size < 2) continue;
 
-        const prefix = longestCommonPrefix(values);
+        const prefix = trimToDelimiterBoundary(longestCommonPrefix(values));
         if (prefix.length < MIN_PREFIX_LEN) continue;
 
         const current = values.reduce(

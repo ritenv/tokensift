@@ -31,4 +31,11 @@ describe("long-keys", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("measures current cost from the real (pretty-printed) text, not a minified reserialization", () => {
+    const pretty = JSON.stringify(rows, null, 2);
+    const report = analyze(pretty, { model: "gpt-4o", rules: [longKeys] });
+    const realTextTokens = analyze(pretty, { model: "gpt-4o", rules: [] }).summary.totalTokens;
+    expect(report.findings[0]?.tokens.current).toBe(realTextTokens);
+  });
 });

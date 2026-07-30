@@ -9,6 +9,10 @@ const REFERS_EXAMPLES = /\b(?:the|these|those)\s+examples?\s+(?:above|below|prov
 
 const CODE_FENCE = /```/;
 
+// bounds structure-lookup to nearby content, so one JSON block anywhere in a long prompt
+// can't silently mask a dangling reference somewhere else in the same document
+const PROXIMITY_WINDOW = 300;
+
 const WHY =
   "an instruction that points at a structure ('as shown above', 'the examples below') costs tokens and confuses the model when that structure doesn't actually exist, usually a template-assembly bug";
 
@@ -16,21 +20,25 @@ function hasStructureBefore(
   ctx: { text: string; jsonRegions: { range: [number, number] }[] },
   index: number,
 ): boolean {
-  if (ctx.jsonRegions.some((r) => r.range[1] <= index)) return true;
-  return CODE_FENCE.test(ctx.text.slice(0, index));
+  const windowStart = Math.max(0, index - PROXIMITY_WINDOW);
+  if (ctx.jsonRegions.some((r) => r.range[1] <= index && r.range[1] > windowStart)) return true;
+  return CODE_FENCE.test(ctx.text.slice(windowStart, index));
 }
 
 function hasStructureAfter(
   ctx: { text: string; jsonRegions: { range: [number, number] }[] },
   index: number,
 ): boolean {
-  if (ctx.jsonRegions.some((r) => r.range[0] >= index)) return true;
-  return CODE_FENCE.test(ctx.text.slice(index));
+  const windowEnd = Math.min(ctx.text.length, index + PROXIMITY_WINDOW);
+  if (ctx.jsonRegions.some((r) => r.range[0] >= index && r.range[0] < windowEnd)) return true;
+  return CODE_FENCE.test(ctx.text.slice(index, windowEnd));
 }
 
 function countOtherExampleMentions(text: string, start: number, end: number): number {
-  const before = text.slice(0, start);
-  const after = text.slice(end);
+  const windowStart = Math.max(0, start - PROXIMITY_WINDOW);
+  const windowEnd = Math.min(text.length, end + PROXIMITY_WINDOW);
+  const before = text.slice(windowStart, start);
+  const after = text.slice(end, windowEnd);
   const matches =
     (before.match(/\bexamples?\b/gi)?.length ?? 0) + (after.match(/\bexamples?\b/gi)?.length ?? 0);
   return matches;

@@ -3,26 +3,30 @@ import { analyze } from "../../src/analyze.js";
 import { unicodePunct } from "../../src/rules/unicode-punct.js";
 
 describe("unicode-punct", () => {
-  it("flags a curly quote and offers the straight-quote fix", () => {
-    const report = analyze("the customer said “it’s broken”", {
+  it("flags a zero-width space, which has real measured savings, and offers a fix", () => {
+    const report = analyze("hello​world", { model: "gpt-4o", rules: [unicodePunct] });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.tokens.saved).toBeGreaterThan(0);
+    expect(report.findings[0]?.fix?.replacement).toBe("");
+  });
+
+  it("does not flag a character whose ASCII replacement costs the same or more, even though it's a NORMALIZE target", () => {
+    // em-dash -> "--" measures zero real savings under o200k_base (both sides tokenize
+    // to 1 token); firing here would be an autofixable "fix" that doesn't actually help.
+    const report = analyze("wait—really", { model: "gpt-4o", rules: [unicodePunct] });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("does not flag a curly quote when its straight-quote replacement isn't actually cheaper", () => {
+    const report = analyze('the customer said "it’s broken"', {
       model: "gpt-4o",
       rules: [unicodePunct],
     });
-
-    const messages = report.findings.map((f) => f.message);
-    expect(messages.some((m) => m.includes("“"))).toBe(true);
-    expect(report.findings.every((f) => f.fix)).toBe(true);
-  });
-
-  it("flags an em-dash and a zero-width space", () => {
-    const report = analyze("wait​—really?", { model: "gpt-4o", rules: [unicodePunct] });
-    const chars = report.findings.map((f) => f.fix?.replacement);
-    expect(chars).toContain("--");
-    expect(chars).toContain("");
+    expect(report.findings).toEqual([]);
   });
 
   it("drops fix and falls back to a plain suggestion when autofix is off", () => {
-    const report = analyze("the customer said “it’s broken”", {
+    const report = analyze("hello​world", {
       model: "gpt-4o",
       rules: [unicodePunct],
       autofix: false,

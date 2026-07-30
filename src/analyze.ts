@@ -121,6 +121,32 @@ function normalize(input: AnalysisInput): Normalized {
   return { text, inputRef: { kind: "payload" }, messages, slots: [] };
 }
 
+// several rules can claim savings on the same region (pretty-json + row-json on one JSON
+// blob, say), but a user applies one restructuring, not all of them -- sum only the largest
+// claim per cluster of overlapping loc.range, not every finding's saved count
+function sumNonOverlappingSavings(findings: Finding[]): number {
+  const withSavings = findings.filter((f) => f.tokens.saved > 0);
+  if (withSavings.length === 0) return 0;
+
+  const sorted = [...withSavings].sort((a, b) => a.loc.range[0] - b.loc.range[0]);
+  let total = 0;
+  let clusterEnd = Number.NEGATIVE_INFINITY;
+  let clusterMax = 0;
+  for (const f of sorted) {
+    const [start, end] = f.loc.range;
+    if (start < clusterEnd) {
+      clusterEnd = Math.max(clusterEnd, end);
+      clusterMax = Math.max(clusterMax, f.tokens.saved);
+    } else {
+      total += clusterMax;
+      clusterEnd = end;
+      clusterMax = f.tokens.saved;
+    }
+  }
+  total += clusterMax;
+  return total;
+}
+
 export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
   const { text, inputRef, messages, slots } = normalize(input);
   const encoder = options.encoder ?? resolveEncoder(options.model);
@@ -161,7 +187,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     (sum, slot) => sum + encoder.countTokens(slot.sample ?? ""),
     0,
   );
-  const totalWasteTokens = findings.reduce((sum, f) => sum + f.tokens.saved, 0);
+  const totalWasteTokens = sumNonOverlappingSavings(findings);
 
   function applyFixes(options: ApplyFixesOptions = {}): string {
     const fixes = findings

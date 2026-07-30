@@ -50,4 +50,38 @@ describe("uuid-bloat", () => {
     });
     expect(report.findings).toEqual([]);
   });
+
+  it("flags a UUID immediately adjacent to underscores", () => {
+    const report = analyze("trace_550e8400-e29b-41d4-a716-446655440000_end", {
+      model: "gpt-4o",
+      rules: [uuidBloat],
+    });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain("550e8400-e29b-41d4-a716-446655440000");
+  });
+
+  it("suggests the same short id for every occurrence of the same repeated UUID", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000";
+    const report = analyze(`id: ${uuid} again: ${uuid} and: ${uuid}`, {
+      model: "gpt-4o",
+      rules: [uuidBloat],
+    });
+    expect(report.findings).toHaveLength(3);
+    const suggestions = report.findings.map((f) => f.suggestion);
+    expect(new Set(suggestions).size).toBe(1);
+    expect(suggestions[0]).toContain("id-1");
+  });
+
+  it("assigns a different short id to a genuinely different UUID", () => {
+    const uuidA = "550e8400-e29b-41d4-a716-446655440000";
+    const uuidB = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    const report = analyze(`first: ${uuidA} second: ${uuidB} first again: ${uuidA}`, {
+      model: "gpt-4o",
+      rules: [uuidBloat],
+    });
+    expect(report.findings).toHaveLength(3);
+    expect(report.findings[0]?.suggestion).toContain("id-1");
+    expect(report.findings[1]?.suggestion).toContain("id-2");
+    expect(report.findings[2]?.suggestion).toContain("id-1");
+  });
 });

@@ -46,15 +46,31 @@ The suffix automaton gives occurrence counts in O(n). Turning counts into full o
 
 ## whitespace-run threshold
 
-o200k_base merges long runs of spaces or newlines into a single token, so short runs are basically free. `whitespace-run` only fires when collapsing the run actually saves tokens, not just whenever it looks messy.
+o200k_base merges long runs of spaces or newlines into a single token, so short runs are basically free. `whitespace-run` only fires when collapsing the run actually saves tokens, not just whenever it looks messy. In practice this means mid-line and blank-line runs rarely trip on realistic input at all (measured: a run needs ~100+ characters before it costs more than 1 token on either o200k_base or cl100k_base) — the rule is behaving correctly, not broken, but "collapse the run" undersells how narrow the real hit rate is.
+
+Code-fence protection is real, not incidental: `findCodeFenceRanges()` pairs up ``` markers and skips any hit whose start falls inside one (an unclosed trailing fence conservatively extends to the end of the text). This used to be unimplemented — the spec's rule table promised it, but nothing in the rule actually checked for fences, and it only looked safe because whitespace runs almost never had real savings inside real code to begin with. A longer run genuinely costing extra tokens inside a fence would have been rewritten in place before this fix.
 
 ## high-entropy-string
 
-No entropy math. It just checks chars-per-token like `uuid-bloat` does. Real secrets land under 2.5 chars/token, normal identifiers land at 4+, gap's wide enough that a fancier formula wouldn't buy much.
+No entropy math. It just checks chars-per-token like `uuid-bloat` does. Real secrets land under 2.5 chars/token, normal identifiers land at 4+, gap's wide enough that a fancier formula wouldn't buy much. SCREAMING_SNAKE_CASE enum/status values (`PAYMENT_PROCESSING_FAILED`) measure 2.8-3.0 chars/token, right at the boundary, purely because underscores compress worse than prose, not because they carry entropy — a dedicated pattern bypasses the gate for these (same position as the credential-prefix bypass), unless the value also looks like a credential.
+
+## findJsonRegions edge cases
+
+Markdown checkbox syntax (`- [ ] task`) parses as a valid, empty JSON array. Skipped: any parsed region whose value is an empty array or object carries no structural data to shorten, tabulate, or de-duplicate in the first place.
+
+A human-written multi-line note inside a JSON string value (`"notes": "line one\n  line two"`) has a literal, unescaped newline — invalid per the JSON grammar, so a strict `JSON.parse` rejects the whole surrounding region. `findJsonRegions` retries once with literal `\n`/`\r`/`\t` inside string values escaped first (`parseJsonTolerantly`); `region.text` still holds the original unescaped source so token counts stay accurate, only `region.value` comes from the tolerant parse.
 
 ## repeated-block vs duplicate-message-content
 
 Yeah these overlap. `repeated-block` just finds repeated text, doesn't know about messages. `duplicate-message-content` compares whole messages and tells you which role/index, useful for catching a system prompt that leaked into a user turn. Kept both.
+
+## repeated-block and JSON structural artifacts
+
+On row-oriented JSON (a search-results array, say), the suffix automaton legitimately finds repeated *syntax* fragments across sibling rows — `',\n    "title": "'`-shaped spans, not real reusable content. "State this block once and refer back to it" doesn't make sense applied to a punctuation fragment, and `row-json`/`long-keys` already describe that structural overhead properly. `repeated-block` skips any span whose every occurrence sits fully inside a `jsonRegions` entry. A value repeated *both* inside JSON and in surrounding prose (an email address in metadata and again in a sentence, say) still gets flagged, since at least one occurrence falls outside any JSON region.
+
+## row-json vs long-keys
+
+Same category of overlap as above. Both fire on the same uniform-row JSON region when it has both long keys and enough rows, and they're two different restructuring *strategies* for the same waste (CSV/columnar vs short-key-plus-legend), not independent savings — a user applies one or the other, never both. Individual findings from both rules are still reported, each with its own correct savings number, but `report.summary.totalWasteTokens`/`cost` doesn't sum them additively: findings are clustered by overlapping `loc.range`, and only the largest claim per cluster counts toward the aggregate (`sumNonOverlappingSavings` in `analyze.ts`) — otherwise overlapping claims across rules on the same region could push `totalWasteTokens` past `totalTokens` itself. Rules themselves stay independent (each only sees its own slice of `AnalysisContext`); the de-duplication happens once, centrally, over the finished finding list.
 
 ## filler lexicon
 
