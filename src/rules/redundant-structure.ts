@@ -4,11 +4,8 @@ import type { Finding } from "../types.js";
 const WHY =
   "the same data serialized twice still costs tokens twice, even if one copy is reformatted (pretty vs minified, reordered keys); repeated-block only catches byte-identical repeats";
 
-// JSON.stringify preserves whatever key order the value happened to be parsed in, so two
-// objects with identical data but differently-ordered keys produce different strings and
-// were never recognized as duplicates -- directly contradicting this rule's own "reordered
-// keys" claim above. Sorting object keys recursively (array order stays as-is, since array
-// order is usually semantically meaningful) makes the signature order-independent.
+// sorts object keys recursively (array order stays, it's usually semantic) so two objects
+// with identical data but different key order produce the same signature
 function canonicalSignature(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(canonicalSignature).join(",")}]`;

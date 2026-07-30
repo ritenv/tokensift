@@ -121,14 +121,9 @@ function normalize(input: AnalysisInput): Normalized {
   return { text, inputRef: { kind: "payload" }, messages, slots: [] };
 }
 
-// Rules routinely make independent savings claims over the same underlying region --
-// pretty-json, row-json, long-keys, and repeated-block can all fire on one JSON blob, and a
-// user can only apply one restructuring to it, not all of them at once. Summing every
-// finding's tokens.saved unconditionally can (and did, on real prompts) push
-// totalWasteTokens past totalTokens itself. Cluster findings by overlapping loc.range and
-// count only the single largest claim per cluster, so the summary reflects what's actually
-// achievable rather than double-counting overlapping suggestions. Individual findings still
-// report their own real, independently-correct savings; only the aggregate is deduplicated.
+// several rules can claim savings on the same region (pretty-json + row-json on one JSON
+// blob, say), but a user applies one restructuring, not all of them -- sum only the largest
+// claim per cluster of overlapping loc.range, not every finding's saved count
 function sumNonOverlappingSavings(findings: Finding[]): number {
   const withSavings = findings.filter((f) => f.tokens.saved > 0);
   if (withSavings.length === 0) return 0;

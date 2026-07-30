@@ -19,15 +19,9 @@ function longestCommonPrefix(values: string[]): string {
 
 const DELIMITER = /[_\- ]/;
 
-// A raw character-level common prefix isn't necessarily a real enum-style boundary --
-// "APPROVED"/"APPROXIMATELY_DONE"/"APPROXIMATE_MATCH" share "APPRO" by pure accident, not
-// because they're members of one enum family. Trimming back to the last delimiter
-// (STATUS_ACTIVE / STATUS_INACTIVE style) inside the raw prefix keeps only genuinely
-// enum-shaped matches; if there's no delimiter at all, this returns "", which the
-// MIN_PREFIX_LEN check below then correctly skips. As a side effect this also prevents a
-// value that's identical to the prefix itself from collapsing to an empty-string suffix
-// (STATUS/STATUS_ACTIVE/STATUS_INACTIVE no longer matches "STATUS" as a bare value, since
-// "STATUS" alone has no trailing delimiter to anchor on).
+// a raw character-level common prefix isn't necessarily an enum boundary --
+// "APPROVED"/"APPROXIMATE_MATCH" share "APPRO" by accident -- so trim back to the last
+// delimiter (STATUS_ACTIVE style); no delimiter at all returns "", skipped by MIN_PREFIX_LEN
 function trimToDelimiterBoundary(prefix: string): string {
   for (let i = prefix.length - 1; i >= 0; i--) {
     if (DELIMITER.test(prefix[i]!)) return prefix.slice(0, i + 1);

@@ -23,9 +23,8 @@ export function findJsonRegions(text: string): JsonRegion[] {
       i++;
       continue;
     }
-    // An empty object/array carries no structural data to flag (no keys to shorten, no
-    // rows to tabulate, nothing to minify) and is a common false-positive source: markdown
-    // checkbox syntax "- [ ]" parses as a valid empty JSON array.
+    // an empty array/object has no structural data to flag, and "- [ ]" markdown checkboxes
+    // parse as one, so this also fixes a real false-positive source
     if (isTrivial(value)) {
       i++;
       continue;
@@ -38,13 +37,9 @@ export function findJsonRegions(text: string): JsonRegion[] {
 
 const NOT_JSON = Symbol("not-json");
 
-// Real authors regularly write "JSON-shaped" text with soft-wrapped, multi-line string values
-// (pasting a multi-sentence note into a JSON template, say) without escaping the newlines --
-// invalid per the JSON grammar, but recognizably JSON to a human reader. A strict JSON.parse
-// treats the whole surrounding region as unparseable, which silently hides it from
-// pretty-json/row-json/long-keys and leaves its structural repetition looking like plain text
-// to repeated-block. Retry with literal control characters inside string values escaped before
-// giving up, so this common near-miss still gets picked up as a real region.
+// a multi-line string value with a literal, unescaped newline is invalid per the JSON
+// grammar but common in hand-written prompts; retry with control chars escaped before
+// giving up on the whole region
 function parseJsonTolerantly(candidate: string): unknown {
   try {
     return JSON.parse(candidate);

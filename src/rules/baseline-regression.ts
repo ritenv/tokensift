@@ -16,9 +16,7 @@ export const baselineRegression = defineRule({
     const threshold = Math.ceil(ctx.baseline * (1 + TOLERANCE_PCT / 100));
     if (current <= threshold) return [];
 
-    // a zero baseline (e.g. --update-baseline run against an empty/placeholder file) makes
-    // the percent-growth math divide by zero; "up Infinity%" is a real, reachable message,
-    // not just a theoretical one.
+    // avoids a real "up Infinity%" message when the baseline was recorded against an empty file
     const growth =
       ctx.baseline === 0
         ? "grew from an empty baseline"

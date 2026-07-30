@@ -6,11 +6,8 @@ const MIN_TOKENS = 30;
 const WHY =
   "a large embedded JSON region that isn't marked with dyn() gets counted as static cost even when it's really per-request data; that breaks the static/dynamic split and cache-alignment accuracy";
 
-// Full-containment only (region entirely inside one slot) missed a realistic case: a static
-// JSON skeleton wrapping one or more dyn()-marked fields, e.g. `{"user_id": ${dyn(...)}}`.
-// The region there only partially overlaps the slot, so it used to get flagged as entirely
-// unlabeled even though the author correctly wrapped the dynamic part. Any overlap at all is
-// treated as "the author already dealt with this region" instead.
+// any overlap counts, not just full containment: a static skeleton wrapping a dyn()-marked
+// field only partially overlaps the slot but the author already dealt with it correctly
 function overlapsSlot(range: [number, number], slots: { range: [number, number] }[]): boolean {
   return slots.some((slot) => range[0] < slot.range[1] && slot.range[0] < range[1]);
 }

@@ -24,12 +24,9 @@ function isPrimitive(value: unknown): boolean {
   return value === null || (typeof value !== "object" && typeof value !== "function");
 }
 
-// CSV cells go through String(value), which turns a nested object/array into the literal
-// text "[object Object]" -- not a serialization of its contents. That makes CSV look
-// artificially cheap for exactly the rows it would corrupt, since collapsing every row's
-// distinct nested value down to the same placeholder string costs almost nothing. Columnar
-// JSON round-trips nested values via JSON.stringify instead, so it stays lossless; CSV is
-// only offered as a candidate when every cell is a primitive.
+// CSV cells go through String(value), which collapses a nested object/array to the literal
+// text "[object Object]" instead of its contents -- lossy, so only offered when every cell
+// is a primitive; columnar JSON round-trips via JSON.stringify and stays lossless either way.
 function hasNestedValues(rows: Record<string, unknown>[], keys: string[]): boolean {
   return rows.some((row) => keys.some((key) => !isPrimitive(row[key])));
 }

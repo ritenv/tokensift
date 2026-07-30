@@ -9,12 +9,8 @@ const REFERS_EXAMPLES = /\b(?:the|these|those)\s+examples?\s+(?:above|below|prov
 
 const CODE_FENCE = /```/;
 
-// Checking the whole document for "does *something* structurally JSON- or fence-shaped
-// exist anywhere" (rather than plausibly near this specific reference) meant any JSON block
-// or code fence anywhere in a long prompt silently defeated detection everywhere else in it,
-// same for any other unrelated use of the word "example". A proximity window keeps this rule
-// cheap and conservative (still no real reference resolution) while no longer being fooled by
-// content far away that the instruction can't plausibly be pointing at.
+// bounds structure-lookup to nearby content, so one JSON block anywhere in a long prompt
+// can't silently mask a dangling reference somewhere else in the same document
 const PROXIMITY_WINDOW = 300;
 
 const WHY =

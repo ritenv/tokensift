@@ -1,9 +1,7 @@
 import { defineRule } from "../rule.js";
 import type { Finding } from "../types.js";
 
-// \b treats "_" as a word character, so "trace_<uuid>_end" would never match -- there's no
-// \b right after "_". These use lookaround against the hex alphabet instead, so a match only
-// stops at a character that couldn't extend a hex run, not at any \w-vs-non-\w transition.
+// lookaround instead of \b: \b treats "_" as a word char, so "trace_<uuid>_end" wouldn't match
 const UUID =
   /(?<![0-9a-fA-F])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-fA-F])/gi;
 
@@ -16,9 +14,7 @@ export const uuidBloat = defineRule({
   why: WHY,
   check(ctx, severity) {
     const findings: Finding[] = [];
-    // Same UUID repeated in the prompt gets the same short id every time -- assigning a
-    // fresh id per occurrence (id-1, id-2, id-3 for one real UUID) would break the exact
-    // referential consistency this rule's own use case (log/trace correlation) depends on.
+    // same UUID gets the same short id every time, so log/trace correlation stays intact
     const shortIdByUuid = new Map<string, string>();
 
     for (const match of ctx.text.matchAll(UUID)) {

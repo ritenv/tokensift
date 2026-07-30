@@ -7,10 +7,8 @@ const CANDIDATE = /\b[A-Za-z0-9][A-Za-z0-9_-]{19,}[A-Za-z0-9]\b/g;
 const SECRET_PREFIX =
   /^(sk-|sk_live_|sk_test_|rk_live_|ghp_|gho_|ghs_|github_pat_|npm_|AKIA|xox[baprs]-|AIza)/;
 const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// SCREAMING_SNAKE_CASE enum/status/stage values (e.g. PAYMENT_PROCESSING_FAILED) are meaningful
-// structured data, not random noise -- they sit right at MAX_CHARS_PER_TOKEN's boundary
-// (measured 2.8-3.0 chars/token for real values) purely because underscores don't compress as
-// well as English prose, not because they carry entropy.
+// enum/status values (PAYMENT_PROCESSING_FAILED) sit right at the chars/token boundary
+// because underscores compress worse than prose, not because they carry entropy
 const SCREAMING_SNAKE_CASE = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/;
 
 const WHY =
@@ -29,12 +27,8 @@ export const highEntropyString = defineRule({
       if (CANONICAL_UUID.test(span)) continue;
       const start = match.index;
 
-      // A credential prefix match is already a strong, independent signal -- the entropy
-      // gate exists to stop ordinary identifiers (camelCase, compound words) from firing,
-      // and applying it uniformly ends up suppressing true positives on this rule's own
-      // credential list too (several real formats tokenize efficiently enough to clear
-      // MAX_CHARS_PER_TOKEN despite being genuine leaked secrets). Bypass the gate once the
-      // prefix already told us what this is.
+      // a credential prefix match bypasses the entropy gate: several real secret formats
+      // tokenize efficiently enough to clear it despite being genuine leaked credentials
       const looksLikeSecret = SECRET_PREFIX.test(span);
       if (!looksLikeSecret && SCREAMING_SNAKE_CASE.test(span)) continue;
       const current = ctx.encoder.countTokens(span);

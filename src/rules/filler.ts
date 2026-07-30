@@ -45,15 +45,8 @@ export const filler = defineRule({
       (sum, hit) => sum + ctx.encoder.countTokens(ctx.text.slice(hit.start, hit.end)),
       0,
     );
-    // One finding per the spec's own "reports aggregate only" design (judging tone/hedging
-    // edges toward judging prompt quality, which this rule deliberately avoids doing
-    // per-instance). Finding.loc only has room for one range, though, and spanning from the
-    // first hit to the last used to engulf everything in between -- for phrases scattered
-    // across a long prompt, that could cover nearly the whole thing. Pointing at just the
-    // first hit is honest about being one representative location, not a claim that
-    // everything between the hits is part of the problem. A real fix for "show every hit"
-    // would need Finding.loc to carry multiple spans, a bigger type change than this
-    // aggregate-message rule justifies on its own.
+    // loc only has room for one range; pointing at the first hit rather than spanning
+    // first-to-last avoids engulfing everything between scattered hits in a long prompt
     const first = hits[0]!;
 
     const finding: Finding = {

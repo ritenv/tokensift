@@ -12,10 +12,8 @@ function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-// Date.parse silently rolls an invalid date like Feb 30 over to a real one (March 1st or
-// 2nd) instead of rejecting it -- confidently suggesting an epoch "equivalent" for a
-// timestamp that was never a real calendar date to begin with. Validating the components
-// directly, before trusting Date.parse's result, catches that instead of propagating it.
+// Date.parse silently rolls an invalid date like Feb 30 over to a real one instead of
+// rejecting it, so components are validated directly first.
 function isValidCalendarDate(
   year: number,
   month: number,
@@ -56,9 +54,7 @@ export const digitFragmentation = defineRule({
       if (Number.isNaN(ms)) continue;
       const start = match.index;
 
-      // a timestamp with a fractional-seconds component carries real sub-second precision;
-      // truncating to epoch seconds would silently drop it, so suggest epoch milliseconds
-      // instead for exactly that case.
+      // epoch seconds would silently drop real sub-second precision
       const hasSubSecondPrecision = Boolean(fraction);
       const epoch = hasSubSecondPrecision ? String(ms) : String(Math.floor(ms / 1000));
       const epochLabel = hasSubSecondPrecision ? "epoch milliseconds" : "epoch seconds";

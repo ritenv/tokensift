@@ -24,12 +24,7 @@ function collect(text: string, pattern: RegExp, replacement: (match: string) => 
 
 const FENCE = /```/g;
 
-// Whitespace runs almost never trip the current<=afterFix cost check inside real code
-// (o200k_base/cl100k_base merge whitespace efficiently), so this rule was "safe" around code
-// blocks by accident, not by an actual guard -- despite the spec's rule table promising code
-// blocks are respected. This makes that guarantee real: pairs up ``` markers sequentially
-// (an unclosed trailing fence is treated as extending to the end of the text, the
-// conservative reading) and skips any hit whose start falls inside one.
+// an unclosed trailing fence conservatively extends to the end of the text
 function findCodeFenceRanges(text: string): [number, number][] {
   const positions = [...text.matchAll(FENCE)].map((m) => m.index);
   const ranges: [number, number][] = [];
