@@ -38,4 +38,13 @@ describe("long-keys", () => {
     const realTextTokens = analyze(pretty, { model: "gpt-4o", rules: [] }).summary.totalTokens;
     expect(report.findings[0]?.tokens.current).toBe(realTextTokens);
   });
+
+  it("flags a bulk data array wrapped in a named key, not just a bare top-level array", () => {
+    const report = analyze(JSON.stringify({ accounts: rows }), {
+      model: "gpt-4o",
+      rules: [longKeys],
+    });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain("8 rows");
+  });
 });

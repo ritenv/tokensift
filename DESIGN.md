@@ -1,121 +1,55 @@
 # Design notes
 
-Real tradeoffs made while building this, kept short. Expands as decisions change.
-
-## Tokenizer
-
-OpenAI exact counts use gpt-tokenizer for the real o200k_base/cl100k_base BPE ranks. Hand-rolling rank tables was ruled out early: they're tens of thousands of merge rules published by OpenAI, and `confidence: "exact"` is a promise this project makes.
+Some thinking-aloud here. Some decisions may not make sense so they are explained here.
 
 ## Cost model
 
-`Finding.cost` is populated now: `perCall` is `tokens.saved * inputCostPerToken` for the resolved model, `per1000Calls` is `perCall` at a legible denomination (a fraction of a cent doesn't read as a real number), and `atVolume` is added when `Config.volume` (`requestsPerDay`/`requestsPerMonth`) is set. Pricing data comes from a curated, filtered snapshot of [LiteLLM's pricing table](https://github.com/BerriAI/litellm) (`src/pricing-data.ts`, MIT-licensed, see LICENSE-THIRD-PARTY.md), reduced to just the models `resolveEncoder()` actually resolves — bundling all ~3000 LiteLLM entries would be pure bloat for models this package can't even tokenize.
+- `report.summary.cost.atVolume` is only set when every finding has one, so that a partial sum doesn't end up understating the real total.
+- `tokensift pricing update` writes `.tokensift/pricing-overrides.json` instead of touching bundled data, since mutating `node_modules` is fragile and gets wiped on reinstall.
+- Pricing ingestion (`pnpm pricing:update`) is a manual script, not a build step, since pricing goes stale on its own schedule, unrelated to releases.
 
-`report.summary.cost` mirrors the same shape (`perCall`/`per1000Calls`/`atVolume`), summed across every finding in `analyze()` (`aggregateCost()`). `atVolume` on the summary is only set when *every* finding has one, since a partial sum (some findings priced, some not) would silently understate the real total rather than surfacing the gap. Matches spec §4's `report.summary` carrying cost fields, though named to match `Finding.cost`'s shape (`cost: {...}`) rather than the spec's flat `estCostPerCall`/`estCostAtVolume` field names, for consistency with the rest of this codebase's naming (no `est` prefix anywhere else either).
+## Anthropic estimate mode
 
-The ingestion is a manual, explicit script (`scripts/update-pricing.mjs`, run via `pnpm pricing:update`), not a build step: pricing data goes stale on its own schedule, unrelated to code releases, so baking a fetch into `build`/`prepublishOnly` would either make releases flaky (network dependency) or silently ship stale numbers forever (if run once and forgotten). Same reasoning as `calibrate anthropic run` staying a separate opt-in command rather than something `analyze` triggers automatically.
+- Gemini throws "not implemented" as it's not currently supported.
+- Anthropic ships a real calibrated encoder, but only for models with a real measured calibration record (bundled or local). An uncalibrated Claude id throws rather than falling back to a rough guess.
+- Calibration is keyed by exact model id, not provider family, in case tokenizer behavior ever diverges across Claude generations (as of now, it doesn't).
+- The calibration math is a simple approximation, not a rigorous statistical fit, and it says so rather than pretending otherwise. Its real accuracy (`meanAbsPercentError`) is measured against actual samples and saved, not just assumed to be good.
+- `tokensift calibrate anthropic run` is the only network call in the package, and only runs when that exact command is invoked.
 
-`tokensift pricing update` is the end-user-facing equivalent, but deliberately doesn't touch the installed package's bundled data (mutating files inside `node_modules` is fragile and gets wiped on every reinstall). It writes a local `.tokensift/pricing-overrides.json` instead, which `analyze`/`check` prefer over the bundled default per exact model id — the same override-file mechanism `calibrate anthropic run` already uses for calibration data, reused here rather than inventing a second pattern. `Config.pricing.overrides` (per spec §9) is the config-file equivalent, in dollars-per-million-tokens since that's how humans actually think about LLM pricing, converted to per-token internally to match the bundled data's shape.
+## Why several rules look like they overlap
 
-## Estimate encoders
+- `repeated-block` vs `duplicate-message-content`: one finds any repeated text, the other compares whole messages and names the role/index (catches a system prompt leaked into a user turn). Both kept.
+- `repeated-block` skips a span whose every occurrence sits fully inside a JSON region, since the suffix automaton otherwise flags meaningless repeated punctuation across sibling rows, already `row-json`/`long-keys`'s job to describe.
+- `redundant-structure` vs `repeated-block`: for a byte-identical duplicate, `repeated-block` already catches it. `redundant-structure` only earns its keep on a *reformatted* duplicate (pretty vs minified, same value, no shared literal text), since it compares parsed values instead of raw text.
 
-Gemini throws a clear "not implemented" error instead of returning a guessed count. A guess mislabeled as an estimate is worse than an explicit error.
+## row-json / long-keys / verbose-schema-values
 
-Anthropic has a real encoder now (`src/encoders/anthropic.ts`), with real bundled calibration data (`src/encoders/anthropic-calibration.ts`) for the current-generation models — `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` — measured against 28 real samples via Anthropic's own token-counting endpoint, mean absolute error ~7.6% for all three. Same policy still applies at the data layer for anything not calibrated: `resolveEncoder()` throws `no calibration data for '<model>'` for any Claude model id without a real measured calibration record, bundled or local. It does not fall back to a rough guess for an uncalibrated model. See "Anthropic estimate encoder" below for how the encoder itself works, and "calibrate anthropic" for how a calibration record gets produced.
+- `row-json` and `long-keys` are alternative strategies for the same waste (CSV/columnar vs short-keys-plus-legend), not independent savings. `totalWasteTokens` dedupes by exact `loc.range` match, keeping only the largest claim per distinct range, deliberately exact-range rather than any-overlap, so a narrower *composable* fix nested inside (`digit-fragmentation` on one timestamp inside an array `row-json` restructures) still gets summed instead of swallowed.
+- Known gap: `verbose-schema-values` reports the whole region's range (it's a cross-row pattern, not a per-field span), so it still collides with `row-json`/`long-keys` there even though it's actually composable with them.
+- `findUniformObjectArrays` also checks a wrapped array (`{"actions": [...]}`, the standard shape for real tool-calling APIs), not just a bare top-level array, locating its exact source span, and stays scoped to this one service rather than `findJsonRegions` itself so `pretty-json` doesn't start double-firing on both an outer object and its nested array.
 
-## Anthropic estimate encoder
+## Other rule notes
 
-No public BPE table exists to be exact against, so this is `confidence: "estimate"` by construction, not a temporary gap. The estimator classifies raw text into the same `TokenClass` buckets the OpenAI encoder already reports (word, punct, whitespace, digit-fragment, hex-fragment, other) via character runs, not decoded tokens (there's nothing to decode), then applies one calibrated chars-per-token ratio per class.
-
-A short whitespace run (1-2 chars) gets folded into the run that follows it before estimation, rather than costing its own synthetic token. Real BPE vocabularies routinely merge a leading space into the next token (" the" is one token, not " " + "the"); without this, single-space runs between words each forced `Math.ceil(1/ratio)` up to a full token regardless of how large the ratio was, which measurably inflated every estimate. This matches what `whitespace-run`'s own note already says about short whitespace runs being "basically free" under real tokenizers, applied here to the estimator instead of a lint rule.
-
-`TokenView.tokens` for this encoder are synthetic, not real BPE ids, subdividing each class run into `ceil(run.length / ratio)` evenly-sliced sub-tokens. Verified this doesn't break anything downstream: only two consumers ever look past `TokenView.count` — `analyze.ts`'s `buildRepeatedSubstringIndex(tokenView.tokens)` (used by `repeated-block`, confirmed it still finds real repeated spans against synthetic tokens) and the class histogram/byte-range shape itself, which nothing besides display code inspects.
-
-## calibrate anthropic
-
-`tokensift calibrate anthropic run` is the only network call anywhere in this package, and it only fires when this specific command runs, never from `analyze`/`check`/anything auto-discovered. Same mechanism serves two purposes: the maintainer runs it once against a dedicated fixture corpus (`test/fixtures/calibration/anthropic-samples.json`, not the same file as the template `init` writes) to produce the bundled default; any downstream user can run it again against their own fixtures and their own key to produce a local override that better fits their own content mix, stored separately and preferred over the bundled default per exact model id.
-
-Fitting is a small fixed-point iteration, not a joint least-squares solve: each round, attribute every sample's actual token count across classes in proportion to what the *current* ratios already predict for that class, not proportional to raw char share (a class with a much larger ratio, like whitespace, genuinely earns a smaller token share per char than a dense class like punctuation, and naive char-share attribution ignores that). A final pass rescales all ratios by a single multiplicative correction factor (real predicted total vs. real actual total, using the actual discrete `Math.ceil`-based estimator, not the continuous fitting approximation) since the continuous fit systematically under-corrects for the rounding-up bias `Math.ceil` introduces on every run — verified against a synthetic ground truth this removes most of the remaining bias without needing to model the rounding directly. Disclosed simplification, not a claim of statistical rigor; the resulting `meanAbsPercentError` is measured and stored alongside the ratios, not asserted.
-
-Calibration is keyed by exact model id, not provider family, since real per-model tokenizer behavior can differ across Claude generations. An unrecognized `claude-*` id throws rather than falling back to a sibling model's calibration. In practice, the real maintainer run against `claude-opus-4-5`/`claude-sonnet-4-5`/`claude-haiku-4-5` produced identical fitted ratios (and identical mean error) for all three, consistent with Anthropic sharing one tokenizer across the current model generation, not a fitting bug — kept as three separate keyed records anyway rather than collapsing them, since that's an observation about the current generation, not a guarantee for future ones.
-
-## Repeated-substring engine
-
-The suffix automaton gives occurrence counts in O(n). Turning counts into full occurrence lists means re-scanning the token stream per reported span, O(n) per span instead of O(1). Fine at prompt scale. Would need real work for a token repeated thousands of times in one payload.
-
-`find()` can legitimately return several spans for what a human would call "one repeated line": a boundary word that happens to match at some but not all occurrences produces its own distinct maximal repeat, at genuinely different (overlapping) positions — covered directly by `repeated-substring.test.ts`'s `abcabcabc` case, not a bug in the service. Left as the service's real output on purpose, since other minimum-length thresholds or consumers might want that granularity. `repeated-block` (the only current consumer) dedupes at the rule layer instead: spans are already sorted by wasted-token cost, so a greedy pass keeps the highest-cost span per cluster of overlapping occurrences and drops the rest, so one repeated block produces one finding. Found via a real example (a reminder line repeated 3 times across few-shot examples produced 3 overlapping findings instead of 1) while building the README's flagship example.
-
-## whitespace-run threshold
-
-o200k_base merges long runs of spaces or newlines into a single token, so short runs are basically free. `whitespace-run` only fires when collapsing the run actually saves tokens, not just whenever it looks messy. In practice this means mid-line and blank-line runs rarely trip on realistic input at all (measured: a run needs ~100+ characters before it costs more than 1 token on either o200k_base or cl100k_base) — the rule is behaving correctly, not broken, but "collapse the run" undersells how narrow the real hit rate is.
-
-Code-fence protection is real, not incidental: `findCodeFenceRanges()` pairs up ``` markers and skips any hit whose start falls inside one (an unclosed trailing fence conservatively extends to the end of the text). This used to be unimplemented — the spec's rule table promised it, but nothing in the rule actually checked for fences, and it only looked safe because whitespace runs almost never had real savings inside real code to begin with. A longer run genuinely costing extra tokens inside a fence would have been rewritten in place before this fix.
-
-## high-entropy-string
-
-No entropy math. It just checks chars-per-token like `uuid-bloat` does. Real secrets land under 2.5 chars/token, normal identifiers land at 4+, gap's wide enough that a fancier formula wouldn't buy much. SCREAMING_SNAKE_CASE enum/status values (`PAYMENT_PROCESSING_FAILED`) measure 2.8-3.0 chars/token, right at the boundary, purely because underscores compress worse than prose, not because they carry entropy — a dedicated pattern bypasses the gate for these (same position as the credential-prefix bypass), unless the value also looks like a credential.
-
-## findJsonRegions edge cases
-
-Markdown checkbox syntax (`- [ ] task`) parses as a valid, empty JSON array. Skipped: any parsed region whose value is an empty array or object carries no structural data to shorten, tabulate, or de-duplicate in the first place.
-
-A human-written multi-line note inside a JSON string value (`"notes": "line one\n  line two"`) has a literal, unescaped newline — invalid per the JSON grammar, so a strict `JSON.parse` rejects the whole surrounding region. `findJsonRegions` retries once with literal `\n`/`\r`/`\t` inside string values escaped first (`parseJsonTolerantly`); `region.text` still holds the original unescaped source so token counts stay accurate, only `region.value` comes from the tolerant parse.
-
-## repeated-block vs duplicate-message-content
-
-Yeah these overlap. `repeated-block` just finds repeated text, doesn't know about messages. `duplicate-message-content` compares whole messages and tells you which role/index, useful for catching a system prompt that leaked into a user turn. Kept both.
-
-## repeated-block and JSON structural artifacts
-
-On row-oriented JSON (a search-results array, say), the suffix automaton legitimately finds repeated *syntax* fragments across sibling rows — `',\n    "title": "'`-shaped spans, not real reusable content. "State this block once and refer back to it" doesn't make sense applied to a punctuation fragment, and `row-json`/`long-keys` already describe that structural overhead properly. `repeated-block` skips any span whose every occurrence sits fully inside a `jsonRegions` entry. A value repeated *both* inside JSON and in surrounding prose (an email address in metadata and again in a sentence, say) still gets flagged, since at least one occurrence falls outside any JSON region.
-
-## row-json vs long-keys
-
-Same category of overlap as above. Both fire on the same uniform-row JSON region when it has both long keys and enough rows, and they're two different restructuring *strategies* for the same waste (CSV/columnar vs short-key-plus-legend), not independent savings — a user applies one or the other, never both. Individual findings from both rules are still reported, each with its own correct savings number, but `report.summary.totalWasteTokens`/`cost` doesn't sum them additively: findings are clustered by overlapping `loc.range`, and only the largest claim per cluster counts toward the aggregate (`sumNonOverlappingSavings` in `analyze.ts`) — otherwise overlapping claims across rules on the same region could push `totalWasteTokens` past `totalTokens` itself. Rules themselves stay independent (each only sees its own slice of `AnalysisContext`); the de-duplication happens once, centrally, over the finished finding list.
-
-## filler lexicon
-
-Small on purpose. Judging tone edges toward judging prompt quality, which we don't do. Can grow this later, maybe make it configurable.
-
-## redundant-structure vs repeated-block
-
-Spec describes catching the same data shown twice in different serializations, JSON and a markdown table, say. That needs a table parser we don't have, so scope is narrower: same parsed JSON value appearing twice. Checked this against `repeated-block` directly: for a byte-identical duplicate, `repeated-block` already catches it, so `redundant-structure` is redundant with it there. The case it actually adds is a duplicate that's been reformatted, pretty-printed once and minified once, say, same value, no shared literal text, so the suffix automaton finds nothing. `redundant-structure` compares parsed values instead of raw text, so it still catches that one. Both rules stay, but the real justification is the reformatted case, not the copy-paste case.
-
-## dead-instruction
-
-Regex plus proximity checks, not real reference resolution. Looks for phrases like "as shown above" and checks whether a JSON region or code fence actually sits on the right side. Cheap and conservative on purpose, false negatives beat false positives here.
-
-## unlabeled-dynamic scope
-
-Only fires on JSON regions, not "anything that looks dynamic." A generic version of this is just high-entropy-string again. JSON blocks are the case that actually matters for cache alignment later.
-
-## thresholds are tuned against OpenAI's tokenizer, not universal
-
-`high-entropy-string`'s 3 chars/token cutoff, `repeated-block`'s 8-token minimum, `unlabeled-dynamic`'s 30-token minimum, all fit to o200k_base by actually tokenizing real strings. Worth re-checking once Anthropic's encoder ships instead of assuming they transfer. Most other rules compare real before/after token counts, so they self-calibrate to whatever encoder runs.
+- `whitespace-run` only fires when collapsing a run actually saves tokens, since o200k_base merges whitespace efficiently enough that real hits need ~100+ chars, a narrower rate than "collapse messy whitespace" implies.
+- `high-entropy-string` uses chars-per-token, not real entropy math, same as `uuid-bloat`, and SCREAMING_SNAKE_CASE enums sit right at that threshold from underscores compressing worse than prose, not from entropy, so they get a dedicated bypass.
+- `findJsonRegions` skips empty arrays/objects (markdown checkboxes like `- [ ]` parse as one) and tolerates a literal unescaped newline inside a JSON string (common in hand-written multi-line notes, invalid per strict JSON grammar).
+- `filler` lexicon is small on purpose, since judging tone edges toward judging prompt quality, which this project doesn't do.
+- `dead-instruction` is regex plus proximity checks, not real reference resolution, cheap and conservative on purpose since false negatives beat false positives here.
+- `unlabeled-dynamic` only fires on JSON regions, not "anything that looks dynamic" (a generic version is just `high-entropy-string` again).
+- Several thresholds (`high-entropy-string`'s 3 chars/token, `repeated-block`'s 8-token minimum, `unlabeled-dynamic`'s 30-token minimum) are fit to OpenAI's tokenizer specifically, worth re-checking against Anthropic's encoder rather than assuming they transfer.
 
 ## applyFixes and JSON inputs
 
-`Report.applyFixes()` splices fixes into `AnalysisContext.text`, which is the joined string `analyze()` builds internally. For plain-string input that's just the original text, so fixes land exactly where they should. For `Message[]`/`Payload` input it's a reconstruction (messages joined with `"\n"`), not the original file bytes, so a fix range doesn't map back to a real position in a JSON source file. Doing that properly needs a JSON parser that tracks source offsets per value through JSON's string escaping, plus a way to re-serialize without reformatting the whole file over one fix. Real feature, not attempted here. The CLI's `--write` refuses JSON input outright instead of guessing.
+Byte-faithful for plain-string input, but for `Message[]`/`Payload` input `applyFixes()` works against a reconstructed joined string, so a fix range doesn't map back to real file bytes. The CLI's `--write` refuses `.json` input outright instead of guessing.
 
-## baseline-regression and where the baseline lives
+## CLI state (budgets, baselines, check)
 
-The rule itself only knows a plain number: `ctx.baseline`, the previously recorded token count, compared against a fixed 10% tolerance. It doesn't know about files or JSON on disk, same split as `budget-exceeded`. The CLI owns the actual state: `.tokensift/baseline.json` maps file path (relative to cwd) to token count, written by `--update-baseline` and read on every run after. `createLinter().analyze()` takes an optional per-call `{ baseline }` override so the CLI can look up a different baseline per file without building a new linter each time.
-
-10% is a constant in the rule file, not a config option. Same reasoning as the other fixed thresholds: one more number nobody would tune correctly without real data on what "normal" drift looks like.
-
-## check vs analyze
-
-Separate command, not `analyze --ci` or similar. `check` is meant to be a fixed CI gate: no `--fix`, `--write`, `--max-warnings`, or rule overrides, just exit 0 or 2. Keeping it a distinct entry point means it can't accidentally grow those flags later. It reads per-file budgets and baselines from `.tokensift/budgets.json` / `.tokensift/baseline.json` instead of `analyze`'s single global `Config.budget`, so `createLinter().analyze()` takes `budget` as a per-call override too now, same as `baseline` already did.
-
-## toMatchTokenBaseline and test identity
-
-Needs a stable key per assertion to know which baseline belongs to which test. Jest and Vitest both pass a matcher context with `testPath` and `currentTestName` to `expect.extend` matchers (part of the interop contract Vitest deliberately kept compatible with Jest's), so the key is `${testPath} > ${currentTestName}` rather than anything this package invents. Storage and tolerance mirror the CLI's `baseline-regression`/`--update-baseline` exactly, same `TOLERANCE_PCT` constant, same "record on first run, compare after" shape, just keyed by test identity instead of file path, and stored at `.tokensift/matcher-baselines.json` instead of `.tokensift/baseline.json`.
-
-No environment detection anywhere in the matcher itself, same input always produces the same result. A missing baseline always gets created and passes, whether that run happens to be on CI or not. Whether an uncommitted baseline file is a problem for a given CI setup is the user's call, not this package's to guess at.
+- Baseline/budget values live in `.tokensift/baseline.json` / `.tokensift/budgets.json`, not in the rules themselves, so the same rule works whether the CLI or a library caller supplies the number.
+- The 10% baseline tolerance is a hardcoded constant, not a config option, since nobody would tune it correctly without real drift data.
+- `check` is a separate command from `analyze`, not a flag, so it can't accidentally grow `--fix`/`--write`/rule-override options later.
+- `toMatchTokenBaseline` is keyed by test identity (`testPath > currentTestName`), since a snapshot-style baseline needs to know which test it belongs to.
+- It skips CI-environment detection entirely, so the same input always produces the same result, on purpose.
 
 ## Provider profile
 
-`AnalysisContext.providerProfile` has a typed shape (message overhead, cache minimums) but nothing populates it yet. Filling it with unverified numbers would be worse than leaving it empty.
-
-## Build tooling
-
-Started with tsdown, switched to tsup. tsdown pulls in rolldown, which needs `node:util`'s `styleText`, only available on newer Node than the dev machine runs. Consumers only need Node 18+; dev tooling shouldn't demand more.
+`AnalysisContext.providerProfile` has a typed shape but nothing populates it yet, since unverified numbers would be worse than empty.

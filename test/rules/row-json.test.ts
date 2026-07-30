@@ -52,6 +52,37 @@ describe("row-json", () => {
     expect(finding.tokens.current).toBe(realTextTokens);
   });
 
+  it("flags a uniform array wrapped in a named key, not just a bare top-level array", () => {
+    const prompt = JSON.stringify({ tickets: rows });
+    const report = analyze(prompt, { model: "gpt-4o", rules: [rowJson] });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain("4 rows");
+  });
+
+  it("locates the wrapped array's real source span, not the whole wrapping object", () => {
+    const pretty = JSON.stringify({ tickets: rows }, null, 2);
+    const report = analyze(pretty, { model: "gpt-4o", rules: [rowJson] });
+    const [start, end] = report.findings[0]!.loc.range;
+    const located = pretty.slice(start, end);
+    expect(located.startsWith("[")).toBe(true);
+    expect(located.endsWith("]")).toBe(true);
+    expect(located).not.toContain("tickets");
+    expect(JSON.parse(located)).toEqual(rows);
+  });
+
+  it("does not flag a wrapped array of objects with different shapes", () => {
+    const mixed = [
+      { id: 1, status: "open" },
+      { id: 2, note: "different shape entirely" },
+      { id: 3, status: "closed" },
+    ];
+    const report = analyze(JSON.stringify({ tickets: mixed }), {
+      model: "gpt-4o",
+      rules: [rowJson],
+    });
+    expect(report.findings).toEqual([]);
+  });
+
   it("never suggests CSV when a row has a nested object value, since CSV would silently collapse it", () => {
     const nestedRows = [
       { id: 1, name: "Alice", meta: { dept: "eng", level: 3 } },
