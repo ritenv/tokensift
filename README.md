@@ -1,7 +1,7 @@
 # tokensift
 
-[![CI](https://img.shields.io/github/actions/workflow/status/ritenv/tokensift/ci.yml?branch=main)](https://github.com/ritenv/tokensift/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/tokensift)](https://www.npmjs.com/package/tokensift)
+[![CI](https://img.shields.io/github/actions/workflow/status/ritenv/tokensift/ci.yml?branch=main)](https://github.com/ritenv/tokensift/actions/workflows/ci.yml)
 [![npm downloads](https://img.shields.io/npm/dm/tokensift)](https://www.npmjs.com/package/tokensift)
 [![license](https://img.shields.io/npm/l/tokensift)](./LICENSE)
 
@@ -82,44 +82,56 @@ Three rules catch three different problems in this prompt. Full output, unedited
 ```js
 [
   {
-    ruleId: 'uuid-bloat',
-    severity: 'warn',
-    message: "UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
-    why: 'hex-with-dashes has no merges in BPE vocabularies, so UUIDs tokenize close to 1 token per 1-2 characters',
-    loc: { input: { kind: 'string' }, range: [445, 481] },
+    ruleId: "uuid-bloat",
+    severity: "warn",
+    message:
+      "UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
+    why: "hex-with-dashes has no merges in BPE vocabularies, so UUIDs tokenize close to 1 token per 1-2 characters",
+    loc: { input: { kind: "string" }, range: [445, 481] },
     tokens: { current: 18, afterFix: 3, saved: 15 },
-    suggestion: "map '550e8400-e29b-41d4-a716-446655440000' to a short id like 'id-1' before prompting, and restore it in your own code after the response",
-    confidence: 'exact',
-    cost: { perCall: { amount: 0.0000375, currency: 'USD' }, per1000Calls: { amount: 0.0375, currency: 'USD' } }
+    suggestion:
+      "map '550e8400-e29b-41d4-a716-446655440000' to a short id like 'id-1' before prompting, and restore it in your own code after the response",
+    confidence: "exact",
+    cost: {
+      perCall: { amount: 0.0000375, currency: "USD" },
+      per1000Calls: { amount: 0.0375, currency: "USD" },
+    },
   },
   {
-    ruleId: 'pretty-json',
-    severity: 'warn',
-    message: 'pretty-printed JSON costs 16 tokens, minified costs 9',
+    ruleId: "pretty-json",
+    severity: "warn",
+    message: "pretty-printed JSON costs 16 tokens, minified costs 9",
     why: "indented JSON spends tokens on newlines and leading spaces at every nesting level; the model doesn't need pretty-printing to parse structured data",
-    loc: { input: { kind: 'string' }, range: [578, 630] },
+    loc: { input: { kind: "string" }, range: [578, 630] },
     tokens: { current: 16, afterFix: 9, saved: 7 },
     fix: {
-      description: 'minify JSON region',
+      description: "minify JSON region",
       range: [578, 630],
-      replacement: '{"category":"string","confidence":"number"}'
+      replacement: '{"category":"string","confidence":"number"}',
     },
-    suggestion: 'minify the JSON region',
-    confidence: 'exact',
-    cost: { perCall: { amount: 0.0000175, currency: 'USD' }, per1000Calls: { amount: 0.0175, currency: 'USD' } }
+    suggestion: "minify the JSON region",
+    confidence: "exact",
+    cost: {
+      perCall: { amount: 0.0000175, currency: "USD" },
+      per1000Calls: { amount: 0.0175, currency: "USD" },
+    },
   },
   {
-    ruleId: 'repeated-block',
-    severity: 'warn',
-    message: 'a 12-token span repeats 3 times, costing 36 tokens total',
+    ruleId: "repeated-block",
+    severity: "warn",
+    message: "a 12-token span repeats 3 times, costing 36 tokens total",
     why: "verbatim spans repeated across a prompt (boilerplate headers, re-pasted examples) are paid every time they appear; the model doesn't need the repetition to use them",
-    loc: { input: { kind: 'string' }, range: [100, 164] },
+    loc: { input: { kind: "string" }, range: [100, 164] },
     tokens: { current: 36, afterFix: 12, saved: 24 },
-    suggestion: 'state this block once and refer back to it instead of repasting it',
-    confidence: 'exact',
-    cost: { perCall: { amount: 0.00006, currency: 'USD' }, per1000Calls: { amount: 0.06, currency: 'USD' } }
-  }
-]
+    suggestion:
+      "state this block once and refer back to it instead of repasting it",
+    confidence: "exact",
+    cost: {
+      perCall: { amount: 0.00006, currency: "USD" },
+      per1000Calls: { amount: 0.06, currency: "USD" },
+    },
+  },
+];
 ```
 
 Same three findings, condensed:
@@ -127,12 +139,13 @@ Same three findings, condensed:
 ```ts
 report.findings.map((f) => `${f.ruleId}: ${f.message}`);
 ```
+
 ```js
 [
   "uuid-bloat: UUID '550e8400-e29b-41d4-a716-446655440000' costs 18 tokens (2.0 chars/token)",
   "pretty-json: pretty-printed JSON costs 16 tokens, minified costs 9",
-  "repeated-block: a 12-token span repeats 3 times, costing 36 tokens total"
-]
+  "repeated-block: a 12-token span repeats 3 times, costing 36 tokens total",
+];
 ```
 
 150 tokens total, 46 of them wasted. `report.summary.cost`: $0.000115 per call, $0.115 per 1,000 calls, real money once this runs at any volume.
@@ -181,6 +194,7 @@ Or against real files: `tokensift prompts/*.md --model gpt-4o`. `**` works too (
 ```
 tokensift ticket.md --model gpt-4o --format json
 ```
+
 ```js
 {
   "schemaVersion": 1,
@@ -251,6 +265,7 @@ Every finding carries real dollar cost, not just a token count: `Finding.cost.pe
 ```
 tokensift pricing show gpt-4o
 ```
+
 ```
 gpt-4o (openai, bundled)
   input:  $2.5000 / 1M tokens
@@ -304,26 +319,26 @@ expect.extend(matchers);
 
 ## Rules
 
-| Rule | Severity | Autofix | Why | Suggestion |
-| --- | --- | --- | --- | --- |
-| `uuid-bloat` | warn | no | UUIDs have no BPE merges, so they cost close to 1 token per 1-2 characters | map to a short id before prompting, restore it after |
-| `unicode-punct` | info | yes | smart quotes, em-dashes, NBSP, zero-width chars often cost more than their ASCII equivalents and slip in via copy-paste | normalize to the ASCII equivalent |
-| `whitespace-run` | warn | yes | long runs of spaces or blank lines are real tokens once past the tokenizer's merge boundary | collapse the run |
-| `pretty-json` | warn | yes | indentation and newlines in pretty-printed JSON cost tokens the model doesn't need to parse the data | minify the JSON region |
-| `repeated-block` | warn | no | a verbatim span repeated across a prompt is paid every time it appears | state this block once and refer back to it instead of repasting it |
-| `base64-blob` | error | no | base64 has no word structure for BPE, so it runs close to 1 token per 1.3-1.5 characters | pass the file through the provider's file/image API or a reference id instead of inlining it |
-| `high-entropy-string` | info | no | random strings (keys, cache ids) fragment close to character-per-token | reference this value by a short id, or keep it out of the prompt entirely if it's a credential |
-| `digit-fragmentation` | info | no | a full ISO-8601 timestamp tokenizes far worse than the epoch seconds it represents | store and pass epoch seconds; format as a human-readable date only where it's displayed |
-| `duplicate-message-content` | warn | no | identical content repeated across messages is usually a template bug, paid every call | say it once and let the model refer back to the earlier message |
-| `filler` | info | no | hedging phrases are token cost with no instruction content | state the request directly, drop the hedging |
-| `row-json` | warn | no | row-oriented JSON repeats every key on every element, N rows means N times the key cost | restructure as columnar JSON or CSV if the model doesn't need per-row objects |
-| `long-keys` | info | no | descriptive keys are re-paid on every row in bulk data | ship a short-key legend once, remap rows to it |
-| `redundant-structure` | info | no | the same data serialized twice costs twice, even reformatted; repeated-block only catches byte-identical repeats | include the data once, refer back to it |
-| `verbose-schema-values` | info | no | enum values with a repeated prefix (STATUS_ACTIVE, STATUS_INACTIVE) pay for that prefix every row | state the shared prefix once, use the suffix per row |
-| `dead-instruction` | info | no | an instruction pointing at a structure that isn't actually there ("as shown above") wastes tokens and confuses the model | remove the dangling reference or add what it points to |
-| `unlabeled-dynamic` | info | no | a large JSON region not wrapped in dyn() gets counted as static cost when it's really per-request data | wrap it with dyn() |
-| `budget-exceeded` | error | no | a declared token budget exists to keep cost and latency predictable, this input broke it | trim static content or tighten dyn() slot samples |
-| `baseline-regression` | error | no | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
+| Rule                        | Severity | Autofix | Why                                                                                                                      | Suggestion                                                                                           |
+| --------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `uuid-bloat`                | warn     | no      | UUIDs have no BPE merges, so they cost close to 1 token per 1-2 characters                                               | map to a short id before prompting, restore it after                                                 |
+| `unicode-punct`             | info     | yes     | smart quotes, em-dashes, NBSP, zero-width chars often cost more than their ASCII equivalents and slip in via copy-paste  | normalize to the ASCII equivalent                                                                    |
+| `whitespace-run`            | warn     | yes     | long runs of spaces or blank lines are real tokens once past the tokenizer's merge boundary                              | collapse the run                                                                                     |
+| `pretty-json`               | warn     | yes     | indentation and newlines in pretty-printed JSON cost tokens the model doesn't need to parse the data                     | minify the JSON region                                                                               |
+| `repeated-block`            | warn     | no      | a verbatim span repeated across a prompt is paid every time it appears                                                   | state this block once and refer back to it instead of repasting it                                   |
+| `base64-blob`               | error    | no      | base64 has no word structure for BPE, so it runs close to 1 token per 1.3-1.5 characters                                 | pass the file through the provider's file/image API or a reference id instead of inlining it         |
+| `high-entropy-string`       | info     | no      | random strings (keys, cache ids) fragment close to character-per-token                                                   | reference this value by a short id, or keep it out of the prompt entirely if it's a credential       |
+| `digit-fragmentation`       | info     | no      | a full ISO-8601 timestamp tokenizes far worse than the epoch seconds it represents                                       | store and pass epoch seconds; format as a human-readable date only where it's displayed              |
+| `duplicate-message-content` | warn     | no      | identical content repeated across messages is usually a template bug, paid every call                                    | say it once and let the model refer back to the earlier message                                      |
+| `filler`                    | info     | no      | hedging phrases are token cost with no instruction content                                                               | state the request directly, drop the hedging                                                         |
+| `row-json`                  | warn     | no      | row-oriented JSON repeats every key on every element, N rows means N times the key cost                                  | restructure as columnar JSON or CSV if the model doesn't need per-row objects                        |
+| `long-keys`                 | info     | no      | descriptive keys are re-paid on every row in bulk data                                                                   | ship a short-key legend once, remap rows to it                                                       |
+| `redundant-structure`       | info     | no      | the same data serialized twice costs twice, even reformatted; repeated-block only catches byte-identical repeats         | include the data once, refer back to it                                                              |
+| `verbose-schema-values`     | info     | no      | enum values with a repeated prefix (STATUS_ACTIVE, STATUS_INACTIVE) pay for that prefix every row                        | state the shared prefix once, use the suffix per row                                                 |
+| `dead-instruction`          | info     | no      | an instruction pointing at a structure that isn't actually there ("as shown above") wastes tokens and confuses the model | remove the dangling reference or add what it points to                                               |
+| `unlabeled-dynamic`         | info     | no      | a large JSON region not wrapped in dyn() gets counted as static cost when it's really per-request data                   | wrap it with dyn()                                                                                   |
+| `budget-exceeded`           | error    | no      | a declared token budget exists to keep cost and latency predictable, this input broke it                                 | trim static content or tighten dyn() slot samples                                                    |
+| `baseline-regression`       | error    | no      | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression              | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
 
 ## What's not here yet
 
