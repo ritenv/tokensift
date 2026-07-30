@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.12.0
+
+### Minor Changes
+
+- 7f3ad74: Add property-based testing
+
 ## 0.11.0
 
 ### Minor Changes
