@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.12.1
+
+### Patch Changes
+
+- ea7b073: Add property tests for applyFixes
+
 ## 0.12.0
 
 ### Minor Changes
