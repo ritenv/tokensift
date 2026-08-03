@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import { analyze } from "../analyze.js";
+import { budget } from "../budget.js";
 import { requireValue } from "./args.js";
 import { resolveBudgetPath, writeBudget } from "./budget-store.js";
 import { loadConfig } from "./load-config.js";
@@ -57,14 +57,11 @@ export async function runBudgetInit(argv: string[], cwd: string): Promise<RunRes
     const resolved = resolveInputs(options.inputs, cwd);
     const budgetPath = resolveBudgetPath(cwd, options.budgetFile);
 
-    const store: Record<string, number> = {};
-    const lines: string[] = [];
-    for (const { file, input } of resolved) {
-      const report = analyze(input, { model });
-      const key = relative(cwd, file);
-      store[key] = report.summary.totalTokens;
-      lines.push(`${key}: ${report.summary.totalTokens} tokens`);
-    }
+    const inputsByKey = Object.fromEntries(
+      resolved.map(({ file, input }) => [relative(cwd, file), input]),
+    );
+    const store = budget(inputsByKey, { model });
+    const lines = Object.entries(store).map(([key, tokens]) => `${key}: ${tokens} tokens`);
     writeBudget(budgetPath, store);
     lines.push("", `wrote ${resolved.length} budget(s) to ${budgetPath}`);
 

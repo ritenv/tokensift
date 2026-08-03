@@ -8,6 +8,7 @@ export { AnthropicEncoder } from "./encoders/anthropic.js";
 export type { AnthropicCalibration } from "./encoders/anthropic.js";
 export { resolvePricing } from "./pricing.js";
 export type { PricingRow, VolumeOptions } from "./pricing.js";
+export { defineRule } from "./rule.js";
 export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,
@@ -32,11 +33,5 @@ export {
 } from "./rules/index.js";
 export { dyn, t } from "./tag.js";
 export type * from "./types.js";
-
-export function diff(): never {
-  throw new Error("diff() is not implemented yet");
-}
-
-export function budget(): never {
-  throw new Error("budget() is not implemented yet");
-}
+export { budget } from "./budget.js";
+export type { BudgetOptions } from "./budget.js";

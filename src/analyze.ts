@@ -2,6 +2,7 @@ import type { Encoder } from "./encoder.js";
 import { resolveEncoder } from "./encoder.js";
 import { type PricingOverride, type VolumeOptions, computeCost } from "./pricing.js";
 import type { AnalysisContext, Rule } from "./rule.js";
+import { builtinRules } from "./rules/index.js";
 import { findJsonRegions } from "./services/json-regions.js";
 import { buildRepeatedSubstringIndex } from "./services/repeated-substring.js";
 import type {
@@ -25,7 +26,10 @@ export function tokenize(text: string, options: TokenizeOptions): TokenView {
 
 export interface AnalyzeOptions {
   model: string;
-  rules?: Rule[];
+  /** file path this input came from, if any; surfaced on every Finding.loc.input.path */
+  path?: string;
+  /** rules to run; defaults to every builtin rule. Pass [] to only tokenize with no findings */
+  rules?: readonly Rule[];
   /** whether rules that can autofix should attach a Finding.fix; defaults to true */
   autofix?: boolean;
   /** declared total token budget, used by the budget-exceeded rule */
@@ -117,7 +121,9 @@ function normalize(input: AnalysisInput): Normalized {
     return { text: input.text, inputRef: { kind: "string" }, slots: input.slots };
   }
   const messages = input.messages ?? [];
-  const text = [input.system, ...messages.map(messageText)].filter(Boolean).join("\n");
+  const toolsText =
+    input.tools && input.tools.length > 0 ? JSON.stringify(input.tools, null, 2) : undefined;
+  const text = [input.system, ...messages.map(messageText), toolsText].filter(Boolean).join("\n");
   return { text, inputRef: { kind: "payload" }, messages, slots: [] };
 }
 
@@ -141,7 +147,11 @@ function sumSavingsDedupedByExactRange(findings: Finding[]): number {
 }
 
 export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
-  const { text, inputRef, messages, slots } = normalize(input);
+  const normalized = normalize(input);
+  const { text, messages, slots } = normalized;
+  const inputRef = options.path
+    ? { ...normalized.inputRef, path: options.path }
+    : normalized.inputRef;
   const encoder = options.encoder ?? resolveEncoder(options.model);
   const tokenView = encoder.tokenize(text);
 
@@ -162,7 +172,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
 
   const findings: Finding[] = [];
   const byRule: Record<string, Finding[]> = {};
-  for (const rule of options.rules ?? []) {
+  for (const rule of options.rules ?? builtinRules) {
     const found = rule.check(ctx, rule.defaultSeverity);
     for (const finding of found) {
       finding.cost = computeCost(

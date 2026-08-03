@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { analyze } from "../src/analyze.js";
 import type { Encoder } from "../src/encoder.js";
 import type { Rule } from "../src/rule.js";
+import { builtinRules } from "../src/rules/index.js";
 import { dyn, t } from "../src/tag.js";
 import type { Message, TokenClass } from "../src/types.js";
 
@@ -133,8 +134,15 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(1050);
   });
 
-  it("returns no findings when no rules are configured", () => {
-    const report = analyze("anything at all", { model: "gpt-4o" });
+  it("defaults to every builtin rule when rules isn't passed", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000";
+    const report = analyze(`Ticket ${uuid}`, { model: "gpt-4o" });
+    expect(report.findings.some((f) => f.ruleId === "uuid-bloat")).toBe(true);
+    expect(Object.keys(report.byRule).length).toBeGreaterThan(1);
+  });
+
+  it("returns no findings when rules: [] is passed explicitly", () => {
+    const report = analyze("anything at all", { model: "gpt-4o", rules: [] });
     expect(report.findings).toEqual([]);
     expect(report.byRule).toEqual({});
   });
@@ -387,5 +395,50 @@ Ticket: ${dyn("ticketBody", { sample: "my billing failed twice this month" })}`;
     });
 
     expect(seen).toEqual([0, 4, 1]);
+  });
+
+  it("counts a Payload's tools toward totalTokens, not just system/messages", () => {
+    const withoutTools = analyze(
+      { system: "You are an agent.", tools: [] },
+      { model: "gpt-4o", rules: [] },
+    );
+    const withTools = analyze(
+      {
+        system: "You are an agent.",
+        tools: [{ name: "send_email", description: "Send an email", parameters: { to: "string" } }],
+      },
+      { model: "gpt-4o", rules: [] },
+    );
+
+    expect(withTools.summary.totalTokens).toBeGreaterThan(withoutTools.summary.totalTokens);
+  });
+
+  it("lets pretty-json/row-json fire on a Payload's tools, same as any other embedded JSON", () => {
+    const rows = [
+      { name: "a", description: "d", parameters: {} },
+      { name: "b", description: "d", parameters: {} },
+      { name: "c", description: "d", parameters: {} },
+    ];
+    const report = analyze(
+      { system: "You are an agent.", tools: rows },
+      { model: "gpt-4o", rules: builtinRules },
+    );
+    expect(report.findings.some((f) => f.ruleId === "row-json")).toBe(true);
+  });
+
+  it("surfaces options.path on every finding's loc.input.path", () => {
+    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+      model: "gpt-4o",
+      path: "prompts/support.md",
+    });
+    expect(report.findings.length).toBeGreaterThan(0);
+    for (const finding of report.findings) {
+      expect(finding.loc.input.path).toBe("prompts/support.md");
+    }
+  });
+
+  it("leaves loc.input.path undefined when no path is given, same as before", () => {
+    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", { model: "gpt-4o" });
+    expect(report.findings[0]?.loc.input.path).toBeUndefined();
   });
 });
