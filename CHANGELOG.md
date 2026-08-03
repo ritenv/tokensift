@@ -1,5 +1,13 @@
 # tokensift
 
+## 0.13.0
+
+### Minor Changes
+
+- 64d91fe: - Add budget library function, similar to the command line one
+  - builtInRules automatically apply when no rules are provided when running analyze
+  - Add ability to provide custom rules
+
 ## 0.12.1
 
 ### Patch Changes
