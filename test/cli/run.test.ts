@@ -45,6 +45,18 @@ describe("run", () => {
     expect(() => JSON.parse(result.output)).not.toThrow();
   });
 
+  it("surfaces the analyzed file's relative path on every finding's loc.input.path", async () => {
+    const result = await run(
+      ["prompts/two-uuids.md", "--model", "gpt-4o", "--format", "json"],
+      cwd,
+    );
+    const parsed = JSON.parse(result.output);
+    expect(parsed.results[0].findings.length).toBeGreaterThan(0);
+    for (const finding of parsed.results[0].findings) {
+      expect(finding.loc.input.path).toBe("prompts/two-uuids.md");
+    }
+  });
+
   it("--fix --write rewrites a real file on disk", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-cli-"));
     const file = join(scratchDir, "prompt.md");

@@ -63,8 +63,9 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
     const encoder = resolveAnthropicOverride(model, cwd, options.calibrationFile);
     const pricingOverrides = loadPricingOverrides(cwd, options.pricingFile);
     const results = resolved.map(({ file, input }) => {
-      const baseline = baselineStore[relative(cwd, file)];
-      return { file, report: linter.analyze(input, { baseline, encoder, pricingOverrides }) };
+      const path = relative(cwd, file);
+      const baseline = baselineStore[path];
+      return { file, report: linter.analyze(input, { path, baseline, encoder, pricingOverrides }) };
     });
 
     if (options.write) {

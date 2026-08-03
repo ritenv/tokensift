@@ -17,6 +17,7 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
 - [Install](#install)
 - [Quickstart](#quickstart)
   - [Template slots](#template-slots)
+  - [Custom rules](#custom-rules)
 - [CLI](#cli)
   - [Baseline regression](#baseline-regression)
   - [`check` and `budget init`](#check-and-budget-init)
@@ -47,10 +48,10 @@ pnpm add tokensift
 
 ## Quickstart
 
-A support-ticket classifier prompt with two few-shot examples, a ticket id, and an output schema, the kind of thing that grows by copy-paste. `builtinRules` runs every shipped rule together:
+A support-ticket classifier prompt with two few-shot examples, a ticket id, and an output schema, the kind of thing that grows by copy-paste. `analyze()` runs every builtin rule by default:
 
 ```ts
-import { analyze, builtinRules } from "tokensift";
+import { analyze } from "tokensift";
 
 const prompt = `You are a support ticket classifier. Classify each ticket into one of: billing, technical, account.
 Remember to respond with only the category name, nothing else.
@@ -73,9 +74,11 @@ Output using this schema:
   "confidence": "number"
 }`;
 
-const report = analyze(prompt, { model: "gpt-4o", rules: builtinRules });
+const report = analyze(prompt, { model: "gpt-4o" });
 console.log(report.findings);
 ```
+
+Pass `rules: [...]` to run a specific subset instead, or `rules: []` to just tokenize with no findings at all. `builtinRules` is still exported if you want to reference or filter the full list explicitly.
 
 Three rules catch three different problems in this prompt. Full output, unedited:
 
@@ -165,6 +168,31 @@ report.summary.staticTokens;
 report.summary.dynamicBudget;
 ```
 
+### Custom rules
+
+`defineRule` gives you the same shape the 18 builtin rules use. A rule reads `AnalysisContext` (the tokenized text, JSON regions, slots, and so on) and returns `Finding[]`:
+
+```ts
+import { defineRule, createLinter, defineConfig } from "tokensift";
+
+const noAllCaps = defineRule({
+  id: "no-all-caps",
+  defaultSeverity: "info",
+  why: "SHOUTING wastes tokens the same as any other verbose phrasing",
+  check(ctx, severity) {
+    // ...scan ctx.text, return Finding[]
+    return [];
+  },
+});
+
+const linter = createLinter(
+  defineConfig({ model: "gpt-4o", customRules: [noAllCaps] }),
+);
+const report = linter.analyze(prompt);
+```
+
+`customRules` runs alongside every builtin rule, not instead of them. Severity overrides in `rules: { ... }` match a custom rule's `id` the same way they match a builtin's.
+
 ## CLI
 
 Same engine, from a terminal. Point it at a file, a glob, or stdin:
@@ -233,6 +261,8 @@ tokensift check prompts/*.md --model gpt-4o
 ```
 
 `budget init` writes `.tokensift/budgets.json`, same shape and same `--budget-file` override as the baseline store. `check` reads both `.tokensift/budgets.json` and `.tokensift/baseline.json` automatically if they exist and applies them per file. Unlike `analyze`, `check` has no `--fix`, `--write`, or `--max-warnings`, it's meant to be the one deterministic gate CI runs: exit `0` or exit `2`, nothing in between. `--format json` works the same as it does on `analyze`.
+
+The measurement `budget init` does is also available directly from the library, no file system involved: `budget({ "prompts/a.md": promptA, "prompts/b.md": promptB }, { model: "gpt-4o" })` returns `{ "prompts/a.md": 412, "prompts/b.md": 289 }`. Useful for building your own budget store instead of `.tokensift/budgets.json`.
 
 ### `calibrate`
 

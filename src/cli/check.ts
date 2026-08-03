@@ -103,6 +103,7 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
       return {
         file,
         report: linter.analyze(input, {
+          path: key,
           budget: budgetStore[key],
           baseline: baselineStore[key],
           encoder,

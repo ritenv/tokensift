@@ -1,3 +1,4 @@
+import type { Rule } from "../rule.js";
 import { base64Blob } from "./base64-blob.js";
 import { baselineRegression } from "./baseline-regression.js";
 import { budgetExceeded } from "./budget-exceeded.js";
@@ -17,7 +18,10 @@ import { uuidBloat } from "./uuid-bloat.js";
 import { verboseSchemaValues } from "./verbose-schema-values.js";
 import { whitespaceRun } from "./whitespace-run.js";
 
-export const builtinRules = [
+// frozen: this array is shared across every analyze()/createLinter() call in the process,
+// so a caller mutating it (push, sort, splice) would silently corrupt every other caller's
+// rule set too. readonly at the type level plus a real freeze, not just documentation.
+export const builtinRules: readonly Rule[] = Object.freeze([
   uuidBloat,
   unicodePunct,
   whitespaceRun,
@@ -36,7 +40,7 @@ export const builtinRules = [
   unlabeledDynamic,
   budgetExceeded,
   baselineRegression,
-];
+]);
 
 export {
   uuidBloat,

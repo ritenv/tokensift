@@ -34,7 +34,7 @@ export function toBeUnderTokens(
 
 export function toHaveNoTokensiftErrors(
   received: AnalysisInput,
-  options: { model: string; rules?: Rule[] },
+  options: { model: string; rules?: readonly Rule[] },
 ): MatcherResult {
   const report = analyze(received, { model: options.model, rules: options.rules ?? builtinRules });
   const errors = report.findings.filter((f) => f.severity === "error");

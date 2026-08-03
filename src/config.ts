@@ -11,6 +11,8 @@ export interface Config {
   model: string;
   volume?: VolumeConfig;
   rules?: Record<string, Severity | "off">;
+  /** extra rules to run alongside the builtins, e.g. from a plugin package; matched by id like any other rule */
+  customRules?: Rule[];
   /** whether rules that can autofix should attach a Finding.fix; defaults to true */
   autofix?: boolean;
   /** declared total token budget, used by the budget-exceeded rule */
@@ -34,11 +36,12 @@ function selectRules(rules: Rule[], overrides: Config["rules"]): Rule[] {
 }
 
 export function createLinter(config: Config) {
-  const rules = selectRules(builtinRules, config.rules);
+  const rules = selectRules([...builtinRules, ...(config.customRules ?? [])], config.rules);
   return {
     analyze: (
       input: AnalysisInput,
       overrides?: {
+        path?: string;
         baseline?: number;
         budget?: number;
         encoder?: Encoder;
@@ -47,6 +50,7 @@ export function createLinter(config: Config) {
     ) =>
       analyze(input, {
         model: config.model,
+        path: overrides?.path,
         rules,
         autofix: config.autofix,
         budget: overrides?.budget ?? config.budget,
