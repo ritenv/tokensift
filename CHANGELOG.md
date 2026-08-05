@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.14.0
+
+### Minor Changes
+
+- 93079b0: Add init command to start the config file
+
 ## 0.13.0
 
 ### Minor Changes
