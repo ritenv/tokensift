@@ -8,6 +8,7 @@ import { runBudgetInit } from "./budget-init.js";
 import { runCalibrateInit, runCalibrateRun } from "./calibrate.js";
 import { resolveAnthropicOverride } from "./calibration-override.js";
 import { runCheck } from "./check.js";
+import { runInit } from "./init.js";
 import { loadConfig } from "./load-config.js";
 import { runPricingShow, runPricingUpdate } from "./pricing-cli.js";
 import { loadPricingOverrides } from "./pricing-override.js";
@@ -101,6 +102,7 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
 }
 
 export async function run(argv: string[], cwd: string): Promise<RunResult> {
+  if (argv[0] === "init") return runInit(argv.slice(1), cwd);
   if (argv[0] === "check") return runCheck(argv.slice(1), cwd);
   if (argv[0] === "budget" && argv[1] === "init") return runBudgetInit(argv.slice(2), cwd);
   if (argv[0] === "calibrate" && argv[1] === "anthropic" && argv[2] === "init") {
