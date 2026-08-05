@@ -9,7 +9,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early, actively developed. Core engine, 18 rules, real dollar cost per finding, a CLI (`analyze`/`check`/`budget init`/`calibrate`/`pricing`), and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [Cost and pricing](#cost-and-pricing) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early, actively developed. Core engine, 18 rules, real dollar cost per finding, a CLI, and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [Cost and pricing](#cost-and-pricing) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Contents
 
@@ -19,6 +19,7 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
   - [Template slots](#template-slots)
   - [Custom rules](#custom-rules)
 - [CLI](#cli)
+  - [`init`](#init)
   - [Baseline regression](#baseline-regression)
   - [`check` and `budget init`](#check-and-budget-init)
   - [`calibrate`](#calibrate)
@@ -196,6 +197,16 @@ const report = linter.analyze(prompt);
 ## CLI
 
 Same engine, from a terminal. Point it at a file, a glob, or stdin:
+
+### `init`
+
+Scaffolds a project in one command:
+
+```
+tokensift init --model gpt-4o
+```
+
+Writes `tokensift.config.json` at the project root (auto-discovered by every other command), plus three reference snippets under `.tokensift/`: a GitHub Action (`github-action-snippet.yml`), a pre-commit check (`pre-commit-snippet.sh`), and a test-matcher setup snippet (`matcher-setup-snippet.ts`). The snippets aren't installed automatically, copy the ones you want into `.github/workflows/`, your existing pre-commit hook, or your test setup, since those are places your own tooling owns. Refuses to overwrite an existing file unless you pass `--force`.
 
 ```
 echo "You are an incident triage assistant. Summarize the error below for the
