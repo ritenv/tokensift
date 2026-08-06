@@ -248,6 +248,8 @@ tokensift ticket.md --model gpt-4o --format json
 }
 ```
 
+`--format github` emits one GitHub Actions workflow command per finding (`::warning file=...,line=...::message`, `::error`/`::notice` for the other severities), for inline PR annotations, wire it into a CI step and every finding shows up right on the diff. `--format markdown` gives you a PR-comment-ready summary table instead, findings, severity counts, and total addressable waste. Both use the file's path relative to where you ran the command.
+
 `--fix --write` applies the safe autofixes (`unicode-punct`, `whitespace-run`, `pretty-json`) and writes them back to the file. It refuses `.json` inputs outright rather than guessing at how to write them back safely, see [DESIGN.md](./DESIGN.md) for why.
 
 Other flags: `--rules uuid-bloat=off,filler=error`, `--max-warnings n`, `--config <path>`. Exit codes: `0` clean, `1` warnings past `--max-warnings`, `2` any error-severity finding, `3` bad input, bad flags, or a bad config file.
@@ -384,7 +386,7 @@ expect.extend(matchers);
 ## What's not here yet
 
 - Gemini models' support. At present they throw a NotImplemented error.
-- Reporters beyond `pretty` and `json`.
+- Reporters beyond `pretty`, `json`, `github`, and `markdown`: `sarif`, `xray-html`.
 
 ## Non-goals
 

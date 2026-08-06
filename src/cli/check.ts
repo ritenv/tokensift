@@ -6,7 +6,9 @@ import { loadBudget, resolveBudgetPath } from "./budget-store.js";
 import { resolveAnthropicOverride } from "./calibration-override.js";
 import { loadConfig } from "./load-config.js";
 import { loadPricingOverrides } from "./pricing-override.js";
+import { formatGithub } from "./reporter-github.js";
 import { formatJson } from "./reporter-json.js";
+import { formatMarkdown } from "./reporter-markdown.js";
 import { formatPretty } from "./reporter-pretty.js";
 import { resolveInputs } from "./resolve-inputs.js";
 import type { RunResult } from "./types.js";
@@ -14,7 +16,7 @@ import type { RunResult } from "./types.js";
 interface CheckOptions {
   inputs: string[];
   model?: string;
-  format: "pretty" | "json";
+  format: "pretty" | "json" | "github" | "markdown";
   config?: string;
   budgetFile?: string;
   baselineFile?: string;
@@ -25,7 +27,7 @@ interface CheckOptions {
 function parseCheckArgs(argv: string[]): CheckOptions {
   const inputs: string[] = [];
   let model: string | undefined;
-  let format: "pretty" | "json" = "pretty";
+  let format: "pretty" | "json" | "github" | "markdown" = "pretty";
   let config: string | undefined;
   let budgetFile: string | undefined;
   let baselineFile: string | undefined;
@@ -40,8 +42,10 @@ function parseCheckArgs(argv: string[]): CheckOptions {
         continue;
       case "--format": {
         const value = requireValue(argv, ++i, "--format");
-        if (value !== "pretty" && value !== "json") {
-          throw new Error(`unsupported --format '${value}', available: pretty, json`);
+        if (value !== "pretty" && value !== "json" && value !== "github" && value !== "markdown") {
+          throw new Error(
+            `unsupported --format '${value}', available: pretty, json, github, markdown`,
+          );
         }
         format = value;
         continue;
@@ -100,22 +104,24 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
     const pricingOverrides = loadPricingOverrides(cwd, options.pricingFile);
     const results = resolved.map(({ file, input }) => {
       const key = relative(cwd, file);
-      return {
-        file,
-        report: linter.analyze(input, {
-          path: key,
-          budget: budgetStore[key],
-          baseline: baselineStore[key],
-          encoder,
-          pricingOverrides,
-        }),
-      };
+      const report = linter.analyze(input, {
+        path: key,
+        budget: budgetStore[key],
+        baseline: baselineStore[key],
+        encoder,
+        pricingOverrides,
+      });
+      return { file: key, report, text: typeof input === "string" ? input : undefined };
     });
 
     const output =
       options.format === "json"
         ? formatJson(results)
-        : formatPretty(results, { color: process.stdout.isTTY === true });
+        : options.format === "github"
+          ? formatGithub(results)
+          : options.format === "markdown"
+            ? formatMarkdown(results)
+            : formatPretty(results, { color: process.stdout.isTTY === true });
 
     const hasErrors = results.some((r) => r.report.findings.some((f) => f.severity === "error"));
     return { exitCode: hasErrors ? 2 : 0, output };

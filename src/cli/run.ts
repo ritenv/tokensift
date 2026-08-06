@@ -12,7 +12,9 @@ import { runInit } from "./init.js";
 import { loadConfig } from "./load-config.js";
 import { runPricingShow, runPricingUpdate } from "./pricing-cli.js";
 import { loadPricingOverrides } from "./pricing-override.js";
+import { formatGithub } from "./reporter-github.js";
 import { formatJson } from "./reporter-json.js";
+import { formatMarkdown } from "./reporter-markdown.js";
 import { formatPretty } from "./reporter-pretty.js";
 import { resolveInputs } from "./resolve-inputs.js";
 import type { RunResult } from "./types.js";
@@ -66,18 +68,25 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
     const results = resolved.map(({ file, input }) => {
       const path = relative(cwd, file);
       const baseline = baselineStore[path];
-      return { file, report: linter.analyze(input, { path, baseline, encoder, pricingOverrides }) };
+      const report = linter.analyze(input, { path, baseline, encoder, pricingOverrides });
+      // display file as the cwd-relative path (matches loc.input.path, and is
+      // what a github/markdown reporter needs to annotate the right file in a
+      // PR diff); "<stdin>" is a sentinel, not a real path, left untouched.
+      const displayFile = file === "<stdin>" ? file : path;
+      return { file: displayFile, report, text: typeof input === "string" ? input : undefined };
     });
 
     if (options.write) {
-      for (const { file, report } of results) writeFileSync(file, report.applyFixes());
+      for (let i = 0; i < resolved.length; i++) {
+        writeFileSync(resolved[i]!.file, results[i]!.report.applyFixes());
+      }
     }
 
     if (options.updateBaseline) {
       const updated = { ...baselineStore };
       for (const { file, report } of results) {
         if (file === "<stdin>") continue;
-        updated[relative(cwd, file)] = report.summary.totalTokens;
+        updated[file] = report.summary.totalTokens;
       }
       writeBaseline(baselinePath, updated);
     }
@@ -85,7 +94,11 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
     const output =
       options.format === "json"
         ? formatJson(results)
-        : formatPretty(results, { color: process.stdout.isTTY === true });
+        : options.format === "github"
+          ? formatGithub(results)
+          : options.format === "markdown"
+            ? formatMarkdown(results)
+            : formatPretty(results, { color: process.stdout.isTTY === true });
 
     const findings = results.flatMap((r) => r.report.findings);
     const hasErrors = findings.some((f) => f.severity === "error");
