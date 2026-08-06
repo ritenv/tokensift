@@ -5,7 +5,7 @@ export interface CliOptions {
   inputs: string[];
   /** may come from a config file instead, so not required at parse time */
   model?: string;
-  format: "pretty" | "json";
+  format: "pretty" | "json" | "github" | "markdown";
   rules?: Record<string, Severity | "off">;
   maxWarnings?: number;
   fix: boolean;
@@ -48,7 +48,7 @@ function parseRules(value: string): Record<string, Severity | "off"> {
 export function parseArgs(argv: string[]): CliOptions {
   const inputs: string[] = [];
   let model: string | undefined;
-  let format: "pretty" | "json" = "pretty";
+  let format: "pretty" | "json" | "github" | "markdown" = "pretty";
   let rules: Record<string, Severity | "off"> | undefined;
   let maxWarnings: number | undefined;
   let fix = false;
@@ -70,8 +70,10 @@ export function parseArgs(argv: string[]): CliOptions {
         continue;
       case "--format": {
         const value = requireValue(argv, ++i, "--format");
-        if (value !== "pretty" && value !== "json") {
-          throw new Error(`unsupported --format '${value}', available: pretty, json`);
+        if (value !== "pretty" && value !== "json" && value !== "github" && value !== "markdown") {
+          throw new Error(
+            `unsupported --format '${value}', available: pretty, json, github, markdown`,
+          );
         }
         format = value;
         continue;

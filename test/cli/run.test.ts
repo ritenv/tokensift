@@ -45,6 +45,25 @@ describe("run", () => {
     expect(() => JSON.parse(result.output)).not.toThrow();
   });
 
+  it("--format github emits a workflow command with a real line number", async () => {
+    const result = await run(
+      ["prompts/two-uuids.md", "--model", "gpt-4o", "--format", "github"],
+      cwd,
+    );
+    expect(result.output).toMatch(
+      /^::warning file=prompts\/two-uuids\.md,title=uuid-bloat,line=\d+,endLine=\d+::/m,
+    );
+  });
+
+  it("--format markdown produces a PR-comment-ready summary", async () => {
+    const result = await run(
+      ["prompts/two-uuids.md", "--model", "gpt-4o", "--format", "markdown"],
+      cwd,
+    );
+    expect(result.output).toContain("## tokensift");
+    expect(result.output).toContain("| prompts/two-uuids.md | uuid-bloat |");
+  });
+
   it("surfaces the analyzed file's relative path on every finding's loc.input.path", async () => {
     const result = await run(
       ["prompts/two-uuids.md", "--model", "gpt-4o", "--format", "json"],

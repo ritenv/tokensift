@@ -3,6 +3,8 @@ import type { Report } from "../analyze.js";
 export interface FileResult {
   file: string;
   report: Report;
+  /** raw analyzed text, only set for plain-string inputs; powers line numbers in the github reporter */
+  text?: string;
 }
 
 const SCHEMA_VERSION = 1;
