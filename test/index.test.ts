@@ -30,4 +30,11 @@ describe("public entry point", () => {
     expect(Object.isFrozen(tokensift.builtinRules)).toBe(true);
     expect(() => (tokensift.builtinRules as unknown[]).push({})).toThrow();
   });
+
+  it("exports per-family OpenAI encoders for bundle-size-conscious callers (edge functions)", () => {
+    expect(typeof tokensift.O200kBaseEncoder).toBe("function");
+    expect(typeof tokensift.Cl100kBaseEncoder).toBe("function");
+    const encoder = new tokensift.O200kBaseEncoder("gpt-4o");
+    expect(encoder.family).toBe("o200k_base");
+  });
 });

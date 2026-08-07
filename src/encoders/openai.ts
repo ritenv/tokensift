@@ -1,94 +1,30 @@
-import * as cl100k from "gpt-tokenizer/model/gpt-4";
-import * as o200k from "gpt-tokenizer/model/gpt-4o";
 import type { Encoder, EncoderMode } from "../encoder.js";
-import type { TokenClass, TokenView } from "../types.js";
+import type { TokenView } from "../types.js";
+import { Cl100kBaseEncoder } from "./openai-cl100k.js";
+import { O200kBaseEncoder } from "./openai-o200k.js";
 import { type OpenAiFamily, resolveOpenAiFamily } from "./registry.js";
 
-interface TokenizerModule {
-  encode(text: string): number[];
-  decode(ids: number[]): string;
-}
-
-const FAMILY_MODULES: Record<OpenAiFamily, TokenizerModule> = {
-  o200k_base: o200k,
-  cl100k_base: cl100k,
-};
-
-const textEncoder = new TextEncoder();
-
-function classify(tokenText: string): TokenClass {
-  const trimmed = tokenText.trim();
-  if (trimmed.length === 0) return "whitespace";
-  if (/^\d+$/.test(trimmed)) return "digit-fragment";
-  if (/^[0-9a-fA-F]+$/.test(trimmed) && /[a-fA-F]/.test(trimmed)) return "hex-fragment";
-  if (/^[a-zA-Z]+$/.test(trimmed)) return "word";
-  if (/^[\p{P}\p{S}]+$/u.test(trimmed)) return "punct";
-  return "other";
-}
-
-function buildTokenView(text: string, mod: TokenizerModule): TokenView {
-  const ids = mod.encode(text);
-  const tokens: TokenView["tokens"] = [];
-  const classHistogram: Record<TokenClass, number> = {
-    word: 0,
-    punct: 0,
-    whitespace: 0,
-    "digit-fragment": 0,
-    "hex-fragment": 0,
-    other: 0,
-  };
-  let byteOffset = 0;
-  let whitespaceTokens = 0;
-  let line = 0;
-  const perLineCosts: number[] = [0];
-  for (const id of ids) {
-    const tokText = mod.decode([id]);
-    const byteLen = textEncoder.encode(tokText).length;
-    tokens.push({ text: tokText, id, byteRange: [byteOffset, byteOffset + byteLen] });
-    byteOffset += byteLen;
-    const cls = classify(tokText);
-    classHistogram[cls] += 1;
-    if (cls === "whitespace") whitespaceTokens += 1;
-
-    // a token is charged to whichever line it starts on; if its own text
-    // crosses a newline (rare, but "\n\n" is a real single token) later
-    // tokens land on the line after
-    perLineCosts[line] = (perLineCosts[line] ?? 0) + 1;
-    for (const ch of tokText) {
-      if (ch === "\n") {
-        line += 1;
-        perLineCosts[line] = 0;
-      }
-    }
-  }
-  return {
-    text,
-    tokens,
-    count: tokens.length,
-    stats: {
-      charsPerToken: tokens.length === 0 ? 0 : text.length / tokens.length,
-      whitespaceShare: tokens.length === 0 ? 0 : whitespaceTokens / tokens.length,
-      classHistogram,
-      perLineCosts,
-    },
-  };
-}
-
+// convenience encoder for any supported OpenAI model id, resolves the family
+// at construction time. Loads both cl100k and o200k rank tables regardless of
+// which family it ends up using, that's the tradeoff for not needing the
+// caller to know the family upfront; bundle-size-sensitive callers should
+// import Cl100kBaseEncoder/O200kBaseEncoder directly instead (see DESIGN.md).
 export class OpenAiEncoder implements Encoder {
   readonly mode: EncoderMode = "exact";
   readonly family: OpenAiFamily;
-  private readonly mod: TokenizerModule;
+  private readonly delegate: Encoder;
 
   constructor(readonly id: string) {
     this.family = resolveOpenAiFamily(id);
-    this.mod = FAMILY_MODULES[this.family];
+    this.delegate =
+      this.family === "o200k_base" ? new O200kBaseEncoder(id) : new Cl100kBaseEncoder(id);
   }
 
   countTokens(text: string): number {
-    return this.mod.encode(text).length;
+    return this.delegate.countTokens(text);
   }
 
   tokenize(text: string): TokenView {
-    return buildTokenView(text, this.mod);
+    return this.delegate.tokenize(text);
   }
 }
