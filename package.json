@@ -33,6 +33,26 @@
         "types": "./dist/matchers.d.cts",
         "default": "./dist/matchers.cjs"
       }
+    },
+    "./encoders/o200k": {
+      "import": {
+        "types": "./dist/encoders/o200k.d.ts",
+        "default": "./dist/encoders/o200k.js"
+      },
+      "require": {
+        "types": "./dist/encoders/o200k.d.cts",
+        "default": "./dist/encoders/o200k.cjs"
+      }
+    },
+    "./encoders/cl100k": {
+      "import": {
+        "types": "./dist/encoders/cl100k.d.ts",
+        "default": "./dist/encoders/cl100k.js"
+      },
+      "require": {
+        "types": "./dist/encoders/cl100k.d.cts",
+        "default": "./dist/encoders/cl100k.cjs"
+      }
     }
   },
   "main": "./dist/index.cjs",
@@ -40,7 +60,9 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "matchers": ["./dist/matchers.d.ts"]
+      "matchers": ["./dist/matchers.d.ts"],
+      "encoders/o200k": ["./dist/encoders/o200k.d.ts"],
+      "encoders/cl100k": ["./dist/encoders/cl100k.d.ts"]
     }
   },
   "bin": {

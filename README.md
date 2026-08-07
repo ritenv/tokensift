@@ -18,6 +18,8 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
 - [Quickstart](#quickstart)
   - [Template slots](#template-slots)
   - [Custom rules](#custom-rules)
+  - [Supabase Edge Functions](#supabase-edge-functions)
+  - [Edge and bundle-size-conscious environments](#edge-and-bundle-size-conscious-environments)
 - [CLI](#cli)
   - [`init`](#init)
   - [Baseline regression](#baseline-regression)
@@ -193,6 +195,34 @@ const report = linter.analyze(prompt);
 ```
 
 `customRules` runs alongside every builtin rule, not instead of them. Severity overrides in `rules: { ... }` match a custom rule's `id` the same way they match a builtin's.
+
+### Supabase Edge Functions
+
+Works out of the box. Supabase Edge Functions run on Deno, and the `analyze`/`budget`/`tokenize` path has no Node-specific code anywhere in it (`node:fs`/`node:path` only show up in the CLI and `tokensift/matchers`, neither of which you'd import in a function), so it resolves cleanly via Deno's `npm:` specifier:
+
+```ts
+import { analyze } from "npm:tokensift";
+
+const report = analyze(prompt, { model: "gpt-4o" });
+```
+
+No config, no import map, no shims. See below if you also want to trim the bundle further.
+
+### Edge and bundle-size-conscious environments
+
+The default `import { analyze } from "tokensift"` path loads both OpenAI tokenizer families (`o200k_base` and `cl100k_base`) so it can handle any supported model without you specifying which family upfront, convenient, but that's real weight (a few megabytes combined) if you only ever target one model, which matters on a platform like Supabase Edge Functions (Deno Deploy) with bundle-size limits.
+
+If you know you're only ever using one family, import it directly and pass it via `options.encoder` to skip loading the other one entirely:
+
+```ts
+import { analyze } from "tokensift";
+import { O200kBaseEncoder } from "tokensift/encoders/o200k"; // gpt-4o, gpt-4o-mini, gpt-4.1
+// import { Cl100kBaseEncoder } from "tokensift/encoders/cl100k"; // gpt-4, gpt-4-turbo, gpt-3.5-turbo
+
+const report = analyze(prompt, { model: "gpt-4o", encoder: new O200kBaseEncoder("gpt-4o") });
+```
+
+These are real separate build entries, not just separate exports, a bundler importing only `tokensift/encoders/o200k` won't pull `cl100k_base`'s data in.
 
 ## CLI
 
