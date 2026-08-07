@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     branches: [main]
+  # manual fallback: a push-to-main event can get dropped during a GitHub
+  # Actions incident, and nothing retroactively re-fires a missed webhook.
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
