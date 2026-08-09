@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.16.0
+
+### Minor Changes
+
+- 6d02106: add sarif reporter
+
 ## 0.15.0
 
 ### Minor Changes
