@@ -1,5 +1,6 @@
 import type { Severity } from "../types.js";
 import { formatUsd } from "./format-usd.js";
+import { lineOf } from "./line-of.js";
 import type { FileResult } from "./reporter-json.js";
 
 const COMMAND: Record<Severity, string> = { error: "error", warn: "warning", info: "notice" };
@@ -14,14 +15,6 @@ function escapeData(value: string): string {
 
 function escapeProperty(value: string): string {
   return escapeData(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
-}
-
-function lineOf(text: string, offset: number): number {
-  let line = 1;
-  for (let i = 0; i < offset && i < text.length; i++) {
-    if (text[i] === "\n") line++;
-  }
-  return line;
 }
 
 export function formatGithub(results: FileResult[]): string {

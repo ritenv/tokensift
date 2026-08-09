@@ -219,7 +219,10 @@ import { analyze } from "tokensift";
 import { O200kBaseEncoder } from "tokensift/encoders/o200k"; // gpt-4o, gpt-4o-mini, gpt-4.1
 // import { Cl100kBaseEncoder } from "tokensift/encoders/cl100k"; // gpt-4, gpt-4-turbo, gpt-3.5-turbo
 
-const report = analyze(prompt, { model: "gpt-4o", encoder: new O200kBaseEncoder("gpt-4o") });
+const report = analyze(prompt, {
+  model: "gpt-4o",
+  encoder: new O200kBaseEncoder("gpt-4o"),
+});
 ```
 
 These are real separate build entries, not just separate exports, a bundler importing only `tokensift/encoders/o200k` won't pull `cl100k_base`'s data in.
@@ -278,7 +281,7 @@ tokensift ticket.md --model gpt-4o --format json
 }
 ```
 
-`--format github` emits one GitHub Actions workflow command per finding (`::warning file=...,line=...::message`, `::error`/`::notice` for the other severities), for inline PR annotations, wire it into a CI step and every finding shows up right on the diff. `--format markdown` gives you a PR-comment-ready summary table instead, findings, severity counts, and total addressable waste. Both use the file's path relative to where you ran the command.
+`--format github` emits one GitHub Actions workflow command per finding (`::warning file=...,line=...::message`, `::error`/`::notice` for the other severities), for inline PR annotations, wire it into a CI step and every finding shows up right on the diff. `--format markdown` gives you a PR-comment-ready summary table instead, findings, severity counts, and total addressable waste. `--format sarif` emits a SARIF 2.1.0 log for GitHub Code Scanning (or any other SARIF consumer), one `result` per finding with severity mapped to SARIF's `level` (`error`/`warning`/`note`) and a `region.startLine` when the input's a plain file. All three use the file's path relative to where you ran the command.
 
 `--fix --write` applies the safe autofixes (`unicode-punct`, `whitespace-run`, `pretty-json`) and writes them back to the file. It refuses `.json` inputs outright rather than guessing at how to write them back safely, see [DESIGN.md](./DESIGN.md) for why.
 
@@ -416,7 +419,6 @@ expect.extend(matchers);
 ## What's not here yet
 
 - Gemini models' support. At present they throw a NotImplemented error.
-- Reporters beyond `pretty`, `json`, `github`, and `markdown`: `sarif`, `xray-html`.
 
 ## Non-goals
 

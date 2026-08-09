@@ -48,7 +48,7 @@ describe("parseArgs", () => {
   });
 
   it("rejects an unsupported --format", () => {
-    expect(() => parseArgs(["a.md", "--model", "gpt-4o", "--format", "sarif"])).toThrow(
+    expect(() => parseArgs(["a.md", "--model", "gpt-4o", "--format", "xml"])).toThrow(
       /unsupported --format/,
     );
   });

@@ -16,6 +16,7 @@ import { formatGithub } from "./reporter-github.js";
 import { formatJson } from "./reporter-json.js";
 import { formatMarkdown } from "./reporter-markdown.js";
 import { formatPretty } from "./reporter-pretty.js";
+import { formatSarif } from "./reporter-sarif.js";
 import { resolveInputs } from "./resolve-inputs.js";
 import type { RunResult } from "./types.js";
 
@@ -98,7 +99,9 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
           ? formatGithub(results)
           : options.format === "markdown"
             ? formatMarkdown(results)
-            : formatPretty(results, { color: process.stdout.isTTY === true });
+            : options.format === "sarif"
+              ? formatSarif(results)
+              : formatPretty(results, { color: process.stdout.isTTY === true });
 
     const findings = results.flatMap((r) => r.report.findings);
     const hasErrors = findings.some((f) => f.severity === "error");
