@@ -10,13 +10,14 @@ import { formatGithub } from "./reporter-github.js";
 import { formatJson } from "./reporter-json.js";
 import { formatMarkdown } from "./reporter-markdown.js";
 import { formatPretty } from "./reporter-pretty.js";
+import { formatSarif } from "./reporter-sarif.js";
 import { resolveInputs } from "./resolve-inputs.js";
 import type { RunResult } from "./types.js";
 
 interface CheckOptions {
   inputs: string[];
   model?: string;
-  format: "pretty" | "json" | "github" | "markdown";
+  format: "pretty" | "json" | "github" | "markdown" | "sarif";
   config?: string;
   budgetFile?: string;
   baselineFile?: string;
@@ -27,7 +28,7 @@ interface CheckOptions {
 function parseCheckArgs(argv: string[]): CheckOptions {
   const inputs: string[] = [];
   let model: string | undefined;
-  let format: "pretty" | "json" | "github" | "markdown" = "pretty";
+  let format: "pretty" | "json" | "github" | "markdown" | "sarif" = "pretty";
   let config: string | undefined;
   let budgetFile: string | undefined;
   let baselineFile: string | undefined;
@@ -42,9 +43,15 @@ function parseCheckArgs(argv: string[]): CheckOptions {
         continue;
       case "--format": {
         const value = requireValue(argv, ++i, "--format");
-        if (value !== "pretty" && value !== "json" && value !== "github" && value !== "markdown") {
+        if (
+          value !== "pretty" &&
+          value !== "json" &&
+          value !== "github" &&
+          value !== "markdown" &&
+          value !== "sarif"
+        ) {
           throw new Error(
-            `unsupported --format '${value}', available: pretty, json, github, markdown`,
+            `unsupported --format '${value}', available: pretty, json, github, markdown, sarif`,
           );
         }
         format = value;
@@ -121,7 +128,9 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
           ? formatGithub(results)
           : options.format === "markdown"
             ? formatMarkdown(results)
-            : formatPretty(results, { color: process.stdout.isTTY === true });
+            : options.format === "sarif"
+              ? formatSarif(results)
+              : formatPretty(results, { color: process.stdout.isTTY === true });
 
     const hasErrors = results.some((r) => r.report.findings.some((f) => f.severity === "error"));
     return { exitCode: hasErrors ? 2 : 0, output };

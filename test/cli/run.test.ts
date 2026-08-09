@@ -64,6 +64,18 @@ describe("run", () => {
     expect(result.output).toContain("| prompts/two-uuids.md | uuid-bloat |");
   });
 
+  it("--format sarif produces a valid SARIF 2.1.0 log", async () => {
+    const result = await run(
+      ["prompts/two-uuids.md", "--model", "gpt-4o", "--format", "sarif"],
+      cwd,
+    );
+    const parsed = JSON.parse(result.output);
+    expect(parsed.version).toBe("2.1.0");
+    expect(parsed.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri).toBe(
+      "prompts/two-uuids.md",
+    );
+  });
+
   it("surfaces the analyzed file's relative path on every finding's loc.input.path", async () => {
     const result = await run(
       ["prompts/two-uuids.md", "--model", "gpt-4o", "--format", "json"],
