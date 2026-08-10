@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.16.1
+
+### Patch Changes
+
+- 31d1dd5: Update readme to mention support for providers
+
 ## 0.16.0
 
 ### Minor Changes
