@@ -19,6 +19,9 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
   - [Template slots](#template-slots)
   - [Custom rules](#custom-rules)
   - [Supabase Edge Functions](#supabase-edge-functions)
+  - [Netlify Edge Functions](#netlify-edge-functions)
+  - [Cloudflare Workers](#cloudflare-workers)
+  - [Vercel Edge Functions](#vercel-edge-functions)
   - [Edge and bundle-size-conscious environments](#edge-and-bundle-size-conscious-environments)
 - [CLI](#cli)
   - [`init`](#init)
@@ -206,13 +209,41 @@ import { analyze } from "npm:tokensift";
 const report = analyze(prompt, { model: "gpt-4o" });
 ```
 
-No config, no import map, no shims. See below if you also want to trim the bundle further.
+No config, no import map, no shims.
+
+### Netlify Edge Functions
+
+Works out of the box. Netlify Edge Functions run on Deno, and the `analyze`/`budget`/`tokenize` path has no Node-specific code anywhere in it, so it resolves cleanly via Deno's `npm:` specifier:
+
+```ts
+import { analyze } from "npm:tokensift";
+
+const report = analyze(prompt, { model: "gpt-4o" });
+```
+
+No config, no import map, no shims.
+
+### Cloudflare Workers
+
+Works out of the box, no `nodejs_compat` flag needed:
+
+```ts
+import { analyze } from "tokensift";
+
+const report = analyze(prompt, { model: "gpt-4o" });
+```
+
+Cloudflare's compressed-size limit is 3MB on Free, 10MB on Paid. tokensift gzips to about 1.6MB, well under either.
+
+### Vercel Edge Functions
+
+Use the regular Node.js runtime on Vercel, not the Edge Runtime. It works fully there, no bundle-size limit to think about. Vercel is moving away from Edge Runtime anyway, as of Next.js 16.3, `runtime = "edge"` isn't supported anymore.
 
 ### Edge and bundle-size-conscious environments
 
-The default `import { analyze } from "tokensift"` path loads both OpenAI tokenizer families (`o200k_base` and `cl100k_base`) so it can handle any supported model without you specifying which family upfront, convenient, but that's real weight (a few megabytes combined) if you only ever target one model, which matters on a platform like Supabase Edge Functions (Deno Deploy) with bundle-size limits.
+The default `import { analyze } from "tokensift"` path loads both OpenAI tokenizer families, convenient, but real weight if you only ever use one model. Worth trimming on Supabase or Netlify Edge Functions, both enforce a compressed bundle-size limit.
 
-If you know you're only ever using one family, import it directly and pass it via `options.encoder` to skip loading the other one entirely:
+Import the family you need directly and pass it via `options.encoder` to skip loading the other one:
 
 ```ts
 import { analyze } from "tokensift";
@@ -225,7 +256,7 @@ const report = analyze(prompt, {
 });
 ```
 
-These are real separate build entries, not just separate exports, a bundler importing only `tokensift/encoders/o200k` won't pull `cl100k_base`'s data in.
+These are separate build entries, not just separate exports, importing one subpath skips the other family's data. Measured with esbuild: everything gzips to about 1.6MB, one family gzips to about 1.13MB.
 
 ## CLI
 
