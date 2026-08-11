@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.17.0
+
+### Minor Changes
+
+- d6bf88d: Add htmlWhitespace rule
+
 ## 0.16.1
 
 ### Patch Changes
