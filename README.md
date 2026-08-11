@@ -9,7 +9,7 @@ Token-efficiency linter for LLM prompts and payloads.
 
 Deterministic, local, tokenizer-level static analysis of prompt strings, `Message[]` arrays, and tool schemas.
 
-**Status**: early, actively developed. Core engine, 18 rules, real dollar cost per finding, a CLI, and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [Cost and pricing](#cost-and-pricing) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
+**Status**: early, actively developed. Core engine, 19 rules, real dollar cost per finding, a CLI, and `tokensift/matchers` for vitest/jest all work today. OpenAI models are exact; Claude support is estimate-based, see [Cost and pricing](#cost-and-pricing) below. See [DESIGN.md](./DESIGN.md) for tradeoffs made along the way.
 
 ## Contents
 
@@ -176,7 +176,7 @@ report.summary.dynamicBudget;
 
 ### Custom rules
 
-`defineRule` gives you the same shape the 18 builtin rules use. A rule reads `AnalysisContext` (the tokenized text, JSON regions, slots, and so on) and returns `Finding[]`:
+`defineRule` gives you the same shape the 19 builtin rules use. A rule reads `AnalysisContext` (the tokenized text, JSON regions, slots, and so on) and returns `Finding[]`:
 
 ```ts
 import { defineRule, createLinter, defineConfig } from "tokensift";
@@ -444,6 +444,7 @@ expect.extend(matchers);
 | `verbose-schema-values`     | info     | no      | enum values with a repeated prefix (STATUS_ACTIVE, STATUS_INACTIVE) pay for that prefix every row                        | state the shared prefix once, use the suffix per row                                                 |
 | `dead-instruction`          | info     | no      | an instruction pointing at a structure that isn't actually there ("as shown above") wastes tokens and confuses the model | remove the dangling reference or add what it points to                                               |
 | `unlabeled-dynamic`         | info     | no      | a large JSON region not wrapped in dyn() gets counted as static cost when it's really per-request data                   | wrap it with dyn()                                                                                   |
+| `html-whitespace`           | warn     | yes     | pretty-printed HTML spends a token on a newline and indentation before nearly every tag                                  | collapse HTML whitespace to single spaces (pre/script/style/textarea left untouched)                 |
 | `budget-exceeded`           | error    | no      | a declared token budget exists to keep cost and latency predictable, this input broke it                                 | trim static content or tighten dyn() slot samples                                                    |
 | `baseline-regression`       | error    | no      | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression              | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
 

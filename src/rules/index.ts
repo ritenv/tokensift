@@ -7,6 +7,7 @@ import { digitFragmentation } from "./digit-fragmentation.js";
 import { duplicateMessageContent } from "./duplicate-message-content.js";
 import { filler } from "./filler.js";
 import { highEntropyString } from "./high-entropy-string.js";
+import { htmlWhitespace } from "./html-whitespace.js";
 import { longKeys } from "./long-keys.js";
 import { prettyJson } from "./pretty-json.js";
 import { redundantStructure } from "./redundant-structure.js";
@@ -38,6 +39,7 @@ export const builtinRules: readonly Rule[] = Object.freeze([
   verboseSchemaValues,
   deadInstruction,
   unlabeledDynamic,
+  htmlWhitespace,
   budgetExceeded,
   baselineRegression,
 ]);
@@ -59,6 +61,7 @@ export {
   verboseSchemaValues,
   deadInstruction,
   unlabeledDynamic,
+  htmlWhitespace,
   budgetExceeded,
   baselineRegression,
 };
