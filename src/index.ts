@@ -23,6 +23,7 @@ export {
   duplicateMessageContent,
   filler,
   highEntropyString,
+  htmlWhitespace,
   longKeys,
   prettyJson,
   redundantStructure,
