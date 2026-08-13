@@ -19,7 +19,7 @@ describe("unlabeled-dynamic", () => {
   });
 
   it("does not flag the same region when it's wrapped in dyn()", () => {
-    const prompt = t`here's the current ticket: ${dyn("ticket", { sample: JSON.stringify(ticket) })}`;
+    const prompt = t`here's the current ticket: ${dyn("ticket", { value: JSON.stringify(ticket) })}`;
     const report = analyze(prompt, { model: "gpt-4o", rules: [unlabeledDynamic] });
     expect(report.findings).toEqual([]);
   });
@@ -41,8 +41,8 @@ describe("unlabeled-dynamic", () => {
   });
 
   it("does not flag a JSON region with a static wrapper around a correctly dyn()-wrapped value", () => {
-    const sample = `"abc123", "metadata": ${JSON.stringify({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9, j: 10 })}}`;
-    const prompt = t`Payload: {"user_id": ${dyn("uid", { sample })}`;
+    const value = `"abc123", "metadata": ${JSON.stringify({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9, j: 10 })}}`;
+    const prompt = t`Payload: {"user_id": ${dyn("uid", { value })}`;
     const report = analyze(prompt, { model: "gpt-4o", rules: [unlabeledDynamic] });
     expect(report.findings).toEqual([]);
   });
