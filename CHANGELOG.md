@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.17.1
+
+### Patch Changes
+
+- 9aad1e4: Improve dyn usage
+
 ## 0.17.0
 
 ### Minor Changes
