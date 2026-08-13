@@ -186,10 +186,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
     byRule[rule.id] = found;
   }
 
-  const dynamicBudget = slots.reduce(
-    (sum, slot) => sum + encoder.countTokens(slot.sample ?? ""),
-    0,
-  );
+  const dynamicBudget = slots.reduce((sum, slot) => sum + encoder.countTokens(slot.value ?? ""), 0);
   const totalWasteTokens = sumSavingsDedupedByExactRange(findings);
 
   function applyFixes(options: ApplyFixesOptions = {}): string {

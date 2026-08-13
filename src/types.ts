@@ -102,7 +102,8 @@ export interface RepeatedSpan {
 export interface Slot {
   name: string;
   range: [number, number];
-  sample?: string;
+  /** whatever content actually filled this slot: a real value at request time, or a representative example when analyzing offline */
+  value?: string;
   maxTokens?: number;
 }
 

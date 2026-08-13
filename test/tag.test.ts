@@ -9,8 +9,8 @@ describe("t / dyn", () => {
     expect(prompt.slots).toEqual([]);
   });
 
-  it("substitutes a dyn() slot's sample text and records its range", () => {
-    const prompt = t`Ticket: ${dyn("ticketBody", { sample: "My billing failed twice" })}`;
+  it("substitutes a dyn() slot's value and records its range", () => {
+    const prompt = t`Ticket: ${dyn("ticketBody", { value: "My billing failed twice" })}`;
     expect(prompt.text).toBe("Ticket: My billing failed twice");
 
     expect(prompt.slots).toHaveLength(1);
@@ -20,19 +20,33 @@ describe("t / dyn", () => {
     expect(prompt.text.slice(from, to)).toBe("My billing failed twice");
   });
 
-  it("falls back to a placeholder when no sample is given", () => {
+  it("falls back to a placeholder when no value is given", () => {
     const prompt = t`Context: ${dyn("history")}`;
     expect(prompt.text).toBe("Context: <history>");
   });
 
   it("handles multiple slots in one template", () => {
-    const prompt = t`${dyn("a", { sample: "AAA" })} and ${dyn("b", { sample: "BBB" })}`;
+    const prompt = t`${dyn("a", { value: "AAA" })} and ${dyn("b", { value: "BBB" })}`;
     expect(prompt.text).toBe("AAA and BBB");
     expect(prompt.slots.map((s) => s.name)).toEqual(["a", "b"]);
   });
 
   it("carries maxTokens through onto the slot", () => {
-    const prompt = t`${dyn("ticketBody", { sample: "hi", maxTokens: 800 })}`;
+    const prompt = t`${dyn("ticketBody", { value: "hi", maxTokens: 800 })}`;
     expect(prompt.slots[0]?.maxTokens).toBe(800);
+  });
+
+  it("the same prompt-building function works for offline analysis and a real request", () => {
+    const buildTicketPrompt = (ticketBody: string) =>
+      t`You are a support agent.\nTicket: ${dyn("ticketBody", { value: ticketBody })}`;
+
+    // offline / CI, no real data yet: a representative value
+    const forAnalysis = buildTicketPrompt("my billing failed twice");
+    expect(forAnalysis.text).toContain("my billing failed twice");
+
+    // real request, real data: the exact same function, .text is the real prompt
+    const forRequest = buildTicketPrompt("the app crashes on login for me specifically");
+    expect(forRequest.text).toContain("the app crashes on login for me specifically");
+    expect(forRequest.text).not.toContain("<ticketBody>");
   });
 });

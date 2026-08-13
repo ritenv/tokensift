@@ -149,7 +149,7 @@ describe("analyze", () => {
 
   it("splits static and dynamic budget for a tagged prompt", () => {
     const prompt = t`You are a support agent.
-Ticket: ${dyn("ticketBody", { sample: "my billing failed twice this month" })}`;
+Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
 
     const report = analyze(prompt, { model: "gpt-4o" });
     expect(report.summary.dynamicBudget).toBeGreaterThan(0);

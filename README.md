@@ -161,15 +161,23 @@ report.findings.map((f) => `${f.ruleId}: ${f.message}`);
 
 ### Template slots
 
-Real prompts have dynamic regions. Mark them with `dyn()` so analysis doesn't mis-tokenize a placeholder, and so static cost can be split from dynamic budget:
+`dyn()` marks a placeholder for a real value that fills in per request, a ticket body, a user's history, whatever changes each time. Build the prompt with it directly and pass the real value, `.text` is the actual prompt you send:
 
 ```ts
 import { t, dyn, analyze } from "tokensift";
 
-const prompt = t`You are a support agent.
-Ticket: ${dyn("ticketBody", { sample: "my billing failed twice" })}`;
+function buildTicketPrompt(ticketBody: string) {
+  return t`You are a support agent.
+Ticket: ${dyn("ticketBody", { value: ticketBody })}`;
+}
 
-const report = analyze(prompt, { model: "gpt-4o" });
+const live = buildTicketPrompt(realTicketBody).text;
+```
+
+It matters for token analysis too. Without `dyn()`, that region gets mis-tokenized as static text. With it, `analyze()` splits static cost from dynamic budget, pass a representative value when you don't have real data yet, offline or in CI:
+
+```ts
+const report = analyze(buildTicketPrompt("my billing failed twice"), { model: "gpt-4o" });
 report.summary.staticTokens;
 report.summary.dynamicBudget;
 ```

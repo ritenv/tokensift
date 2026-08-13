@@ -22,7 +22,7 @@ describe("filler", () => {
   });
 
   it("never fires inside a dyn() slot, that's user content not our prose", () => {
-    const prompt = t`Reply to this message: ${dyn("userMessage", { sample: "if you don't mind, can you help?" })}`;
+    const prompt = t`Reply to this message: ${dyn("userMessage", { value: "if you don't mind, can you help?" })}`;
     const report = analyze(prompt, { model: "gpt-4o", rules: [filler] });
     expect(report.findings).toEqual([]);
   });
