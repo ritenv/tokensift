@@ -1,5 +1,11 @@
 # tokensift
 
+## 0.18.0
+
+### Minor Changes
+
+- 09e21f6: Add encoder-mismatch rule
+
 ## 0.17.1
 
 ### Patch Changes
