@@ -21,6 +21,7 @@ export {
   deadInstruction,
   digitFragmentation,
   duplicateMessageContent,
+  encoderMismatch,
   filler,
   highEntropyString,
   htmlWhitespace,

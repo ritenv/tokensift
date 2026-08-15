@@ -10,6 +10,8 @@ export interface ProviderProfile {
 export interface AnalysisContext {
   text: string;
   inputRef: InputRef;
+  /** the model string passed to analyze(); encoder-mismatch compares this against ctx.encoder */
+  model: string;
   encoder: Encoder;
   tokenView: TokenView;
   jsonRegions: JsonRegion[];

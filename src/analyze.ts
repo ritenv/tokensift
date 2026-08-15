@@ -158,6 +158,7 @@ export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
   const ctx: AnalysisContext = {
     text,
     inputRef,
+    model: options.model,
     encoder,
     tokenView,
     jsonRegions: findJsonRegions(text),
