@@ -5,6 +5,7 @@ import { budgetExceeded } from "./budget-exceeded.js";
 import { deadInstruction } from "./dead-instruction.js";
 import { digitFragmentation } from "./digit-fragmentation.js";
 import { duplicateMessageContent } from "./duplicate-message-content.js";
+import { encoderMismatch } from "./encoder-mismatch.js";
 import { filler } from "./filler.js";
 import { highEntropyString } from "./high-entropy-string.js";
 import { htmlWhitespace } from "./html-whitespace.js";
@@ -40,6 +41,7 @@ export const builtinRules: readonly Rule[] = Object.freeze([
   deadInstruction,
   unlabeledDynamic,
   htmlWhitespace,
+  encoderMismatch,
   budgetExceeded,
   baselineRegression,
 ]);
@@ -62,6 +64,7 @@ export {
   deadInstruction,
   unlabeledDynamic,
   htmlWhitespace,
+  encoderMismatch,
   budgetExceeded,
   baselineRegression,
 };
