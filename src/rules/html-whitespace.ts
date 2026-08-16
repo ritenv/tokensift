@@ -10,6 +10,14 @@ const MIN_TAGS_IN_REGION = 3;
 // angle-bracket mentions elsewhere in a prompt don't get clustered together
 const MAX_GAP_BETWEEN_TAGS = 200;
 
+// TypeScript generics (Array<string>, Set<number>) match the same bare
+// <word> shape as a real tag, closing tags and attributed tags never occur
+// in generic syntax, so requiring at least one somewhere in the cluster is
+// enough to tell real markup apart from a run of type annotations.
+function looksLikeRealTagEvidence(tag: string): boolean {
+  return tag.startsWith("</") || /\s/.test(tag);
+}
+
 interface HtmlRegion {
   range: [number, number];
   text: string;
@@ -23,9 +31,10 @@ function findHtmlRegions(text: string): HtmlRegion[] {
   let start = tags[0]!.index;
   let end = start + tags[0]![0].length;
   let count = 1;
+  let hasRealTagEvidence = looksLikeRealTagEvidence(tags[0]![0]);
 
   const flush = () => {
-    if (count >= MIN_TAGS_IN_REGION) {
+    if (count >= MIN_TAGS_IN_REGION && hasRealTagEvidence) {
       regions.push({ range: [start, end], text: text.slice(start, end) });
     }
   };
@@ -36,9 +45,11 @@ function findHtmlRegions(text: string): HtmlRegion[] {
       flush();
       start = tag.index;
       count = 0;
+      hasRealTagEvidence = false;
     }
     end = tag.index + tag[0].length;
     count++;
+    if (looksLikeRealTagEvidence(tag[0])) hasRealTagEvidence = true;
   }
   flush();
 
