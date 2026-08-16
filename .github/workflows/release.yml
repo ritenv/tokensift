@@ -36,8 +36,25 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - uses: changesets/action@v1
+        id: changesets
         with:
           version: pnpm changeset:version
           publish: pnpm changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # only runs on a real publish, not when changesets/action just opened a
+      # Version Packages PR; pulls this version's section straight out of the
+      # changelog changesets already wrote, so the release notes and the
+      # changelog never say different things
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          awk -v ver="## ${VERSION}" '
+            $0 == ver { flag=1; next }
+            /^## / && flag { exit }
+            flag { print }
+          ' CHANGELOG.md > /tmp/release-notes.md
+          gh release create "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/release-notes.md
