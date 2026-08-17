@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.0.1
+
+### Patch Changes
+
+- 380894f: Improve html-whitesace rule
+
 ## 0.18.0
 
 ### Minor Changes
