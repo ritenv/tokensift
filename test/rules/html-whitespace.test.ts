@@ -43,6 +43,26 @@ describe("html-whitespace", () => {
     expect(report.findings).toEqual([]);
   });
 
+  it("does not flag TypeScript generics as HTML (no closing tags, no attributes)", () => {
+    const prompt = `interface Config {
+  names: Array<string>;
+  ids: Array<number>;
+  flags: Array<boolean>;
+  tags: Array<string>;
+}`;
+    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("still flags real HTML mixed with a couple of generic-shaped tags", () => {
+    const prompt = `<div class="config">
+  <span>Array<string> items</span>
+  <span>Array<number> ids</span>
+</div>`;
+    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    expect(report.findings.length).toBeGreaterThan(0);
+  });
+
   it("finds nothing when there's no HTML in the prompt", () => {
     const report = analyze("summarize the ticket below in plain prose", {
       model: "gpt-4o",
