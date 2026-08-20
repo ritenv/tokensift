@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.1.0
+
+### Minor Changes
+
+- 0957f1e: Add support for all current GPT models
+
 ## 1.0.1
 
 ### Patch Changes
