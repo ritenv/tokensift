@@ -3,6 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runPricingShow, runPricingUpdate } from "../../src/cli/pricing-cli.js";
+import { PRICING_DATA } from "../../src/pricing-data.js";
+
+// derived from the real bundled model list rather than hardcoded, so this
+// mock doesn't silently drift out of sync the next time a model is added
+function mockLiteLlmResponse(perModel: Record<string, unknown>): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const model of Object.keys(PRICING_DATA)) body[model] = perModel;
+  return body;
+}
 
 let scratchDir: string | undefined;
 afterEach(() => {
@@ -55,24 +64,11 @@ describe("pricing update", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
-        const body: Record<string, unknown> = {};
-        for (const model of [
-          "gpt-4o",
-          "gpt-4o-mini",
-          "gpt-4.1",
-          "gpt-4-turbo",
-          "gpt-4",
-          "gpt-3.5-turbo",
-          "claude-opus-4-5",
-          "claude-sonnet-4-5",
-          "claude-haiku-4-5",
-        ]) {
-          body[model] = {
-            input_cost_per_token: 0.000002,
-            output_cost_per_token: 0.000008,
-            cache_read_input_token_cost: 0.0000005,
-          };
-        }
+        const body = mockLiteLlmResponse({
+          input_cost_per_token: 0.000002,
+          output_cost_per_token: 0.000008,
+          cache_read_input_token_cost: 0.0000005,
+        });
         return new Response(JSON.stringify(body), { status: 200 });
       }),
     );
@@ -80,7 +76,9 @@ describe("pricing update", () => {
     const outPath = join(scratchDir, "pricing.json");
     const result = await runPricingUpdate(["--out", outPath], scratchDir);
     expect(result.exitCode).toBe(0);
-    expect(result.output).toContain("refreshed pricing for 9 models");
+    expect(result.output).toContain(
+      `refreshed pricing for ${Object.keys(PRICING_DATA).length} models`,
+    );
 
     const written = JSON.parse(readFileSync(outPath, "utf8"));
     expect(written["gpt-4o"].inputPerMTok).toBeCloseTo(2);
@@ -108,20 +106,10 @@ describe("pricing update", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
-        const body: Record<string, unknown> = {};
-        for (const model of [
-          "gpt-4o",
-          "gpt-4o-mini",
-          "gpt-4.1",
-          "gpt-4-turbo",
-          "gpt-4",
-          "gpt-3.5-turbo",
-          "claude-opus-4-5",
-          "claude-sonnet-4-5",
-          "claude-haiku-4-5",
-        ]) {
-          body[model] = { input_cost_per_token: 0.000001, output_cost_per_token: 0.000002 };
-        }
+        const body = mockLiteLlmResponse({
+          input_cost_per_token: 0.000001,
+          output_cost_per_token: 0.000002,
+        });
         return new Response(JSON.stringify(body), { status: 200 });
       }),
     );
