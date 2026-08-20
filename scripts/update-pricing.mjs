@@ -15,10 +15,31 @@ const SOURCE_URL =
 // Kept in sync by hand with src/encoders/registry.ts (OPENAI_MODEL_FAMILY)
 // and src/encoders/anthropic-calibration.ts (ANTHROPIC_CALIBRATIONS): only
 // pull pricing for models tokensift actually resolves an encoder for.
+// o1-mini is deliberately absent: it's in OPENAI_MODEL_FAMILY (gpt-tokenizer
+// still ships its rank data) but LiteLLM no longer tracks pricing for it,
+// superseded by o3-mini/o4-mini. Finding.cost is undefined for it, same
+// documented, expected case as any model with no bundled pricing row.
 const SUPPORTED_MODELS = [
   "gpt-4o",
   "gpt-4o-mini",
   "gpt-4.1",
+  "gpt-4.1-mini",
+  "gpt-4.1-nano",
+  "chatgpt-4o-latest",
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-5-nano",
+  "gpt-5-pro",
+  "gpt-5-chat-latest",
+  "gpt-5-codex",
+  "o1",
+  "o1-pro",
+  "o3",
+  "o3-mini",
+  "o3-pro",
+  "o4-mini",
+  "codex-mini-latest",
+  "computer-use-preview",
   "gpt-4-turbo",
   "gpt-4",
   "gpt-3.5-turbo",

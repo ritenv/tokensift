@@ -32,7 +32,7 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
   - [Config file](#config-file)
 - [Test matchers](#test-matchers)
 - [Rules](#rules)
-- [What's not here yet](#whats-not-here-yet)
+- [Supported models](#supported-models)
 - [Non-goals](#non-goals)
 - [License](#license)
 
@@ -457,9 +457,19 @@ expect.extend(matchers);
 | `budget-exceeded`           | error    | no      | a declared token budget exists to keep cost and latency predictable, this input broke it                                 | trim static content or tighten dyn() slot samples                                                    |
 | `baseline-regression`       | error    | no      | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression              | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
 
-## What's not here yet
+## Supported models
 
-- Gemini models' support. At present they throw a NotImplemented error.
+<!-- keep in sync with src/encoders/registry.ts's OPENAI_MODEL_FAMILY and src/encoders/anthropic-calibration.ts's ANTHROPIC_CALIBRATIONS -->
+
+| Family | Models | Confidence |
+| --- | --- | --- |
+| `o200k_base` | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `chatgpt-4o-latest`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5-chat-latest`, `gpt-5-codex`, `o1`, `o1-mini`, `o1-pro`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`, `codex-mini-latest`, `computer-use-preview` | exact |
+| `cl100k_base` | `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo` | exact |
+| anthropic | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` | estimate |
+
+Any other model throws a clear error naming what's supported, instead of silently guessing, including `gpt-oss` models, which use a different encoding this package doesn't implement yet. Pass a custom `Encoder` via `options.encoder` for anything else.
+
+Gemini models aren't supported yet, they throw a `NotImplemented` error.
 
 ## Non-goals
 
