@@ -388,6 +388,12 @@ gpt-4o (openai, bundled)
   cache read: $1.2500 / 1M tokens
 ```
 
+`tokensift pricing show` with no model lists every model tokensift can tokenize:
+
+```
+tokensift pricing show
+```
+
 `tokensift pricing update` refetches the LiteLLM snapshot and writes a local `.tokensift/pricing-overrides.json` (`--out <path>` for somewhere else), which `analyze`/`check` prefer over the bundled default per exact model id, same override pattern as `calibrate`. This is the only other network call anywhere in this package besides `calibrate anthropic run`, strictly opt-in, never automatic. You can also hand-write overrides for a specific model, or set `pricing.overrides` in your config file, in dollars per million tokens:
 
 ```json
