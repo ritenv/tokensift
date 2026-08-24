@@ -29,11 +29,18 @@ describe("pricing show", () => {
     expect(result.output).toContain("input:");
   });
 
-  it("refuses when no model is given", async () => {
+  it("lists every supported model, grouped by family, when no model is given", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-pricing-"));
     const result = await runPricingShow([], scratchDir);
-    expect(result.exitCode).toBe(3);
-    expect(result.output).toContain("usage:");
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("o200k_base (exact):");
+    expect(result.output).toContain("gpt-4o");
+    expect(result.output).toContain("cl100k_base (exact):");
+    expect(result.output).toContain("gpt-4-turbo");
+    expect(result.output).toContain("anthropic (estimate):");
+    expect(result.output).toContain("claude-opus-4-5");
+    // o1-mini resolves an encoder but has no pricing row, still belongs here
+    expect(result.output).toContain("o1-mini");
   });
 
   it("errors clearly for a model with no pricing data at all", async () => {

@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { ANTHROPIC_CALIBRATIONS } from "../encoders/anthropic-calibration.js";
+import { OPENAI_MODEL_FAMILY } from "../encoders/registry.js";
 import { PRICING_DATA } from "../pricing-data.js";
 import type { PricingOverride } from "../pricing.js";
 import { resolvePricing } from "../pricing.js";
@@ -35,11 +37,35 @@ function perMillion(perToken: number): number {
   return perToken * PER_MILLION;
 }
 
+// grouped by encoder family, not by pricing coverage: a model can resolve a
+// real encoder with no pricing row (o1-mini), and this listing is about what
+// tokensift can tokenize, matching README's "Supported models" table exactly.
+function listSupportedModels(): string {
+  const byFamily = new Map<string, string[]>();
+  for (const [model, family] of Object.entries(OPENAI_MODEL_FAMILY)) {
+    const models = byFamily.get(family) ?? [];
+    models.push(model);
+    byFamily.set(family, models);
+  }
+
+  const lines: string[] = [];
+  for (const family of ["o200k_base", "cl100k_base"]) {
+    const models = byFamily.get(family);
+    if (models) lines.push(`${family} (exact): ${models.join(", ")}`);
+  }
+  const anthropicModels = Object.keys(ANTHROPIC_CALIBRATIONS);
+  if (anthropicModels.length > 0) {
+    lines.push(`anthropic (estimate): ${anthropicModels.join(", ")}`);
+  }
+  lines.push("", "run `tokensift pricing show <model>` for pricing details on a specific model");
+  return lines.join("\n");
+}
+
 export async function runPricingShow(argv: string[], cwd: string): Promise<RunResult> {
   try {
     const options = parsePricingShowArgs(argv);
     if (!options.model) {
-      throw new Error("usage: tokensift pricing show <model>");
+      return { exitCode: 0, output: listSupportedModels() };
     }
 
     const overrides = loadPricingOverrides(cwd, options.pricingFile);
