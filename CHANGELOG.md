@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.2.0
+
+### Minor Changes
+
+- 6eab963: List supported models when model is ommitted from pricing
+
 ## 1.1.0
 
 ### Minor Changes
