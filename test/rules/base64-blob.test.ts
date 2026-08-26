@@ -74,4 +74,12 @@ describe("base64-blob", () => {
     );
     expect(report.findings).toEqual([]);
   });
+
+  it("does not flag a long CamelCase identifier, it's not base64", () => {
+    const report = analyze(
+      "the error occurred in ThisIsAVeryLongConcatenatedClassNameUsedInternallyForSomeSpecificPurpose during initialization",
+      { model: "gpt-4o", rules: [base64Blob] },
+    );
+    expect(report.findings).toEqual([]);
+  });
 });
