@@ -49,6 +49,8 @@ export const base64Blob = defineRule({
     for (const match of ctx.text.matchAll(STANDALONE)) {
       if (overlapsClaimed(match.index, match[0].length)) continue;
       if (!NON_HEX.test(match[0])) continue;
+      const charsPerToken = match[0].length / ctx.encoder.countTokens(match[0]);
+      if (charsPerToken > MAX_CHARS_PER_TOKEN) continue;
       report(match[0], match.index);
     }
 
