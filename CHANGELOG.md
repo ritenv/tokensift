@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.2.1
+
+### Patch Changes
+
+- 0ddf3b8: Fix base64-blob false positive on long CamelCase identifiers
+
 ## 1.2.0
 
 ### Minor Changes
