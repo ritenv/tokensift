@@ -326,6 +326,8 @@ tokensift ticket.md --model gpt-4o --format json
 
 Other flags: `--rules uuid-bloat=off,filler=error`, `--max-warnings n`, `--config <path>`. Exit codes: `0` clean, `1` warnings past `--max-warnings`, `2` any error-severity finding, `3` bad input, bad flags, or a bad config file.
 
+`tokensift --version` (or `-v`) prints the installed version; `tokensift --help` (or `-h`, or no arguments at all) prints a full command/flag summary.
+
 ### Baseline regression
 
 Record how many tokens a file costs today, then get flagged when it drifts too far from that:

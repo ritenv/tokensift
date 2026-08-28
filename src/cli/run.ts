@@ -117,7 +117,40 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
   }
 }
 
-export async function run(argv: string[], cwd: string): Promise<RunResult> {
+const HELP = `tokensift <files|glob...> --model <model> [options]
+
+Commands:
+  tokensift <files|glob...> --model <model>   analyze prompt files (default command)
+  tokensift init --model <model>              scaffold tokensift.config.json + reference snippets
+  tokensift check --model <model>             CI mode: budget/baseline gate, no per-finding output
+  tokensift budget init                       scaffold a budget config
+  tokensift calibrate anthropic init          scaffold an Anthropic calibration fixture file
+  tokensift calibrate anthropic run           run calibration against the Anthropic API
+  tokensift pricing show [model]              print bundled pricing, or list all supported models
+  tokensift pricing update                    refresh bundled pricing from LiteLLM
+
+Options:
+  --model <id>            model to analyze against (required)
+  --format <name>         pretty (default), json, github, markdown, sarif
+  --rules <id=severity,..> override a rule's severity, or "off"
+  --fix --write            apply safe autofixes and write them back to the file
+  --stdin                  read a single prompt from stdin instead of files
+  --max-warnings <n>       exit 1 if warn-severity findings exceed n
+  --config <path>          path to tokensift.config.json (default: cwd)
+  --baseline-file <path>   path to the baseline store (default: .tokensift/baseline.json)
+  --update-baseline        record current token counts as the new baseline
+  --calibration-file <path> path to an Anthropic calibration override file
+  --pricing-file <path>    path to a pricing override file
+  --version, -v            print the installed version
+  --help, -h               print this message
+
+Exit codes: 0 clean, 1 warnings past --max-warnings, 2 an error-severity finding, 3 bad input/flags/config.`;
+
+export async function run(argv: string[], cwd: string, version = "unknown"): Promise<RunResult> {
+  if (argv[0] === "--version" || argv[0] === "-v") return { exitCode: 0, output: version };
+  if (argv[0] === "--help" || argv[0] === "-h" || argv.length === 0) {
+    return { exitCode: 0, output: HELP };
+  }
   if (argv[0] === "init") return runInit(argv.slice(1), cwd);
   if (argv[0] === "check") return runCheck(argv.slice(1), cwd);
   if (argv[0] === "budget" && argv[1] === "init") return runBudgetInit(argv.slice(2), cwd);
