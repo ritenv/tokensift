@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.3.0
+
+### Minor Changes
+
+- 54dc794: Add --version/-v and --help/-h flags to the CLI, and print help when invoked with no arguments
+
 ## 1.2.1
 
 ### Patch Changes
