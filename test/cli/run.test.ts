@@ -15,6 +15,37 @@ afterEach(() => {
 });
 
 describe("run", () => {
+  it("prints the version on --version", async () => {
+    const result = await run(["--version"], cwd, "9.9.9");
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toBe("9.9.9");
+  });
+
+  it("prints the version on -v", async () => {
+    const result = await run(["-v"], cwd, "9.9.9");
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toBe("9.9.9");
+  });
+
+  it("prints help on --help", async () => {
+    const result = await run(["--help"], cwd);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("Commands:");
+    expect(result.output).toContain("tokensift init");
+  });
+
+  it("prints help on -h", async () => {
+    const result = await run(["-h"], cwd);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("Commands:");
+  });
+
+  it("prints help when invoked with no arguments at all", async () => {
+    const result = await run([], cwd);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("Commands:");
+  });
+
   it("exits 0 on a clean file with no findings", async () => {
     const result = await run(["prompts/top.md", "--model", "gpt-4o"], cwd);
     expect(result.exitCode).toBe(0);
