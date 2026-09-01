@@ -158,6 +158,61 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     );
   });
 
+  // reports ctx.slots' ranges as findings, so tests can assert exact rebased positions
+  // through the public Report shape rather than reaching into analyze()'s internals
+  const reportsSlotRanges: Rule = {
+    id: "reports-slot-ranges",
+    defaultSeverity: "info",
+    why: "test fixture rule",
+    check(ctx) {
+      return ctx.slots.map((slot) => ({
+        ruleId: "reports-slot-ranges",
+        severity: "info" as const,
+        message: `slot '${slot.name}' at [${slot.range[0]},${slot.range[1]}]`,
+        why: "test fixture rule",
+        loc: { input: ctx.inputRef, range: slot.range },
+        tokens: { current: 0, afterFix: 0, saved: 0 },
+        confidence: "exact" as const,
+      }));
+    },
+  };
+
+  it("rebases a message's own slots to their real position in the joined text (Message[] input)", () => {
+    const built = t`ticket id: ${dyn("id", { value: "TCK-1" })}`;
+    const messages: Message[] = [
+      { role: "system", content: "You are terse." },
+      { role: "user", content: built.text, slots: built.slots },
+    ];
+
+    const report = analyze(messages, { model: "gpt-4o", rules: [reportsSlotRanges] });
+    expect(report.findings).toHaveLength(1);
+    const [from, to] = report.findings[0]!.loc.range;
+
+    const joined = ["You are terse.", built.text].join("\n");
+    expect(joined.slice(from, to)).toBe("TCK-1");
+  });
+
+  it("rebases slots correctly in Payload input, matching filter(Boolean) when system is absent", () => {
+    const built = t`user says: ${dyn("msg", { value: "hello there" })}`;
+    const messages: Message[] = [{ role: "user", content: built.text, slots: built.slots }];
+
+    const withSystem = analyze(
+      { system: "be terse", messages },
+      { model: "gpt-4o", rules: [reportsSlotRanges] },
+    );
+    const withoutSystem = analyze({ messages }, { model: "gpt-4o", rules: [reportsSlotRanges] });
+
+    const [fromWith, toWith] = withSystem.findings[0]!.loc.range;
+    const joinedWith = ["be terse", built.text].join("\n");
+    expect(joinedWith.slice(fromWith, toWith)).toBe("hello there");
+
+    const [fromWithout, toWithout] = withoutSystem.findings[0]!.loc.range;
+    // no system block means the message starts at offset 0, not after a missing "\n" gap --
+    // exactly what filter(Boolean) already guaranteed before this change
+    expect(built.text.slice(fromWithout, toWithout)).toBe("hello there");
+    expect(fromWithout).toBe(built.text.indexOf("hello there"));
+  });
+
   it("joins Message[] content for analysis and keeps the messages on the context", () => {
     const messages: Message[] = [
       { role: "system", content: "You are terse." },

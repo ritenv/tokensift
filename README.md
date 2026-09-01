@@ -182,6 +182,8 @@ report.summary.staticTokens;
 report.summary.dynamicBudget;
 ```
 
+`dyn()` works inside a single message's content too, not just a top-level prompt string, pass both halves through: `{ role: "user", content: built.text, slots: built.slots }`. This is what `cache-buster` reads to catch dynamic content (a timestamp, a user id) placed before a large static block, which stops that block from ever hitting a provider's prompt cache, since caching matches on exact prefixes.
+
 ### Custom rules
 
 `defineRule` gives you the same shape the 20 builtin rules use. A rule reads `AnalysisContext` (the tokenized text, JSON regions, slots, and so on) and returns `Finding[]`:
@@ -377,6 +379,8 @@ Every finding carries real dollar cost, not just a token count: `Finding.cost.pe
 }
 ```
 
+One caveat: cost figures assume no caching. If a finding sits inside a region a provider is actually caching, the real cost is lower, closer to the cache-read rate than the base rate. tokensift can't know your actual cache hit rate, that depends on your traffic, not the prompt text. `cache-buster`'s own cost figure already uses the cache-read rate, not the base rate.
+
 `tokensift pricing show <model>` prints the rates tokensift is actually using for a model:
 
 ```
@@ -464,6 +468,7 @@ expect.extend(matchers);
 | `encoder-mismatch`          | warn     | no      | counting with the wrong tokenizer family yields systematically wrong token counts                                        | pass an encoder that matches the configured model, or update the model string to match the encoder   |
 | `budget-exceeded`           | error    | no      | a declared token budget exists to keep cost and latency predictable, this input broke it                                 | trim static content or tighten dyn() slot samples                                                    |
 | `baseline-regression`       | error    | no      | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression              | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
+| `cache-buster`               | error    | no      | provider prompt caches match on exact prefixes; dynamic content placed before a large static block stops that block from ever being cached | move the dynamic content after the static content it currently precedes                              |
 
 ## Supported models
 

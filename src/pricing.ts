@@ -59,16 +59,14 @@ function requestsPerMonth(volume: VolumeOptions): number | undefined {
 
 const PER_1000_CALLS = 1000;
 
-export function computeCost(
-  tokensSaved: number,
-  model: string,
+// shared by computeCost (tokensSaved * base input rate) and any rule computing its own
+// per-call dollar amount from a different rate, e.g. cache-buster's rate *delta* rather
+// than a token-count reduction -- both just need {perCall, per1000Calls, atVolume} built
+// from one number the same way.
+export function moneyFromPerCallAmount(
+  perCallAmount: number,
   volume?: VolumeOptions,
-  overrides?: Record<string, PricingOverride>,
-): { perCall: Money; per1000Calls: Money; atVolume?: Money } | undefined {
-  const pricing = resolvePricing(model, overrides);
-  if (!pricing) return undefined;
-
-  const perCallAmount = tokensSaved * pricing.inputCostPerToken;
+): { perCall: Money; per1000Calls: Money; atVolume?: Money } {
   const perCall: Money = { amount: perCallAmount, currency: "USD" };
   const per1000Calls: Money = { amount: perCallAmount * PER_1000_CALLS, currency: "USD" };
 
@@ -78,4 +76,16 @@ export function computeCost(
   if (monthly === undefined) return { perCall, per1000Calls };
 
   return { perCall, per1000Calls, atVolume: { amount: perCallAmount * monthly, currency: "USD" } };
+}
+
+export function computeCost(
+  tokensSaved: number,
+  model: string,
+  volume?: VolumeOptions,
+  overrides?: Record<string, PricingOverride>,
+): { perCall: Money; per1000Calls: Money; atVolume?: Money } | undefined {
+  const pricing = resolvePricing(model, overrides);
+  if (!pricing) return undefined;
+
+  return moneyFromPerCallAmount(tokensSaved * pricing.inputCostPerToken, volume);
 }

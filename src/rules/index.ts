@@ -2,6 +2,7 @@ import type { Rule } from "../rule.js";
 import { base64Blob } from "./base64-blob.js";
 import { baselineRegression } from "./baseline-regression.js";
 import { budgetExceeded } from "./budget-exceeded.js";
+import { cacheBuster } from "./cache-buster.js";
 import { deadInstruction } from "./dead-instruction.js";
 import { digitFragmentation } from "./digit-fragmentation.js";
 import { duplicateMessageContent } from "./duplicate-message-content.js";
@@ -44,6 +45,7 @@ export const builtinRules: readonly Rule[] = Object.freeze([
   encoderMismatch,
   budgetExceeded,
   baselineRegression,
+  cacheBuster,
 ]);
 
 export {
@@ -67,4 +69,5 @@ export {
   encoderMismatch,
   budgetExceeded,
   baselineRegression,
+  cacheBuster,
 };

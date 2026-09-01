@@ -18,6 +18,7 @@ export {
   baselineRegression,
   budgetExceeded,
   builtinRules,
+  cacheBuster,
   deadInstruction,
   digitFragmentation,
   duplicateMessageContent,
