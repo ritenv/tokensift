@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.4.0
+
+### Minor Changes
+
+- 7364a55: Add cache-buster rule: flags dynamic content placed before a large static block, which blocks that block from ever being cached under provider prompt caching's exact-prefix matching
+
 ## 1.3.0
 
 ### Minor Changes
