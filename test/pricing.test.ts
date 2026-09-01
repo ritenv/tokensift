@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeCost, resolvePricing } from "../src/pricing.js";
+import { computeCost, moneyFromPerCallAmount, resolvePricing } from "../src/pricing.js";
 
 describe("resolvePricing", () => {
   it("finds a known model", () => {
@@ -73,5 +73,28 @@ describe("computeCost", () => {
     const base = resolvePricing("gpt-4o")!;
     const pricing = resolvePricing("gpt-4o", { "gpt-4o": { inputPerMTok: 1 } });
     expect(pricing?.outputCostPerToken).toBe(base.outputCostPerToken);
+  });
+});
+
+describe("moneyFromPerCallAmount", () => {
+  it("builds perCall and per1000Calls from a single amount", () => {
+    const money = moneyFromPerCallAmount(0.05);
+    expect(money.perCall.amount).toBeCloseTo(0.05);
+    expect(money.per1000Calls.amount).toBeCloseTo(50);
+    expect(money.atVolume).toBeUndefined();
+  });
+
+  it("projects atVolume the same way computeCost does", () => {
+    const money = moneyFromPerCallAmount(0.05, { requestsPerMonth: 2000 });
+    expect(money.atVolume?.amount).toBeCloseTo(100);
+  });
+
+  it("computeCost's output is byte-identical to building it from moneyFromPerCallAmount directly", () => {
+    const pricing = resolvePricing("gpt-4o")!;
+    const viaComputeCost = computeCost(100, "gpt-4o", { requestsPerMonth: 5000 });
+    const viaHelper = moneyFromPerCallAmount(100 * pricing.inputCostPerToken, {
+      requestsPerMonth: 5000,
+    });
+    expect(viaComputeCost).toEqual(viaHelper);
   });
 });

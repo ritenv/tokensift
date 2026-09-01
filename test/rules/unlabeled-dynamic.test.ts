@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { analyze } from "../../src/analyze.js";
 import { unlabeledDynamic } from "../../src/rules/unlabeled-dynamic.js";
 import { dyn, t } from "../../src/tag.js";
+import type { Message } from "../../src/types.js";
 
 const ticket = {
   id: "TCK-8842",
@@ -45,5 +46,25 @@ describe("unlabeled-dynamic", () => {
     const prompt = t`Payload: {"user_id": ${dyn("uid", { value })}`;
     const report = analyze(prompt, { model: "gpt-4o", rules: [unlabeledDynamic] });
     expect(report.findings).toEqual([]);
+  });
+
+  it("does not flag a message-level dyn()-marked JSON region in Message[] input", () => {
+    const built = t`here's the current ticket: ${dyn("ticket", { value: JSON.stringify(ticket) })}`;
+    const messages: Message[] = [
+      { role: "user", content: built.text, slots: built.slots },
+      { role: "assistant", content: "got it" },
+    ];
+    const report = analyze(messages, { model: "gpt-4o", rules: [unlabeledDynamic] });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("still flags an unmarked message's embedded JSON when a different message carries slots", () => {
+    const built = t`${dyn("ticket", { value: JSON.stringify(ticket) })}`;
+    const messages: Message[] = [
+      { role: "user", content: built.text, slots: built.slots },
+      { role: "assistant", content: `here's another one:\n${JSON.stringify(ticket)}` },
+    ];
+    const report = analyze(messages, { model: "gpt-4o", rules: [unlabeledDynamic] });
+    expect(report.findings).toHaveLength(1);
   });
 });

@@ -25,6 +25,8 @@ export type ContentPart = TextPart | { type: string; [key: string]: unknown };
 export interface Message {
   role: Role;
   content: string | ContentPart[];
+  /** slots from a dyn()/t()-built content string, so cache-buster can see dynamic spans inside a message, not just a top-level TaggedPrompt */
+  slots?: Slot[];
 }
 
 export interface ToolSchema {
