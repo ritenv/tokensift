@@ -16,6 +16,7 @@ export type { AnalysisContext, Rule } from "./rule.js";
 export {
   base64Blob,
   baselineRegression,
+  belowCacheMinimum,
   budgetExceeded,
   builtinRules,
   cacheBuster,

@@ -1,6 +1,7 @@
 import type { Rule } from "../rule.js";
 import { base64Blob } from "./base64-blob.js";
 import { baselineRegression } from "./baseline-regression.js";
+import { belowCacheMinimum } from "./below-cache-minimum.js";
 import { budgetExceeded } from "./budget-exceeded.js";
 import { cacheBuster } from "./cache-buster.js";
 import { deadInstruction } from "./dead-instruction.js";
@@ -46,6 +47,7 @@ export const builtinRules: readonly Rule[] = Object.freeze([
   budgetExceeded,
   baselineRegression,
   cacheBuster,
+  belowCacheMinimum,
 ]);
 
 export {
@@ -70,4 +72,5 @@ export {
   budgetExceeded,
   baselineRegression,
   cacheBuster,
+  belowCacheMinimum,
 };

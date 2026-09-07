@@ -469,6 +469,7 @@ expect.extend(matchers);
 | `budget-exceeded`           | error    | no      | a declared token budget exists to keep cost and latency predictable, this input broke it                                 | trim static content or tighten dyn() slot samples                                                    |
 | `baseline-regression`       | error    | no      | a token count creeping up past a recorded baseline usually means an unnoticed prompt or template regression              | review what changed since the baseline, re-run with `--update-baseline` if the growth is intentional |
 | `cache-buster`               | error    | no      | provider prompt caches match on exact prefixes; dynamic content placed before a large static block stops that block from ever being cached | move the dynamic content after the static content it currently precedes                              |
+| `below-cache-minimum`        | info     | no      | providers enforce a minimum cacheable prefix length; a shorter static prefix never caches regardless of ordering         | add more static content before the dynamic part, or don't rely on caching for this prompt            |
 
 ## Supported models
 
