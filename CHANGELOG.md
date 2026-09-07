@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.5.0
+
+### Minor Changes
+
+- 63f7e15: Add below-cache-minimum rule (D2): flags a dyn()-marked prompt whose static prefix is shorter than the model's real minimum cacheable length, so it can never be cached regardless of ordering
+
 ## 1.4.0
 
 ### Minor Changes
