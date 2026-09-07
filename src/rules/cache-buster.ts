@@ -1,39 +1,12 @@
 import { moneyFromPerCallAmount, resolvePricing } from "../pricing.js";
 import { defineRule } from "../rule.js";
-import type { Finding, Message } from "../types.js";
+import { findMessageIndex } from "../services/message-position.js";
+import type { Finding } from "../types.js";
 
 const DEFAULT_MIN_TOKENS = 2048;
 
 const WHY =
   "prompt caches match on exact prefixes; dynamic content placed before a large static block invalidates caching for everything after it, so identical static content gets billed at the full rate every call instead of the cache-read discount";
-
-function messageText(message: Message): string {
-  if (typeof message.content === "string") return message.content;
-  return message.content
-    .map((part) => ("text" in part && typeof part.text === "string" ? part.text : ""))
-    .join("");
-}
-
-// same indexOf-with-advancing-cursor technique duplicate-message-content.ts already uses to
-// locate a message's own span inside ctx.text, reused here to attribute a slot position back
-// to the message it came from, without replicating normalize()'s exact join logic.
-function findMessageIndex(
-  text: string,
-  messages: Message[] | undefined,
-  position: number,
-): number | undefined {
-  if (!messages) return undefined;
-  let cursor = 0;
-  for (let i = 0; i < messages.length; i++) {
-    const content = messageText(messages[i]!);
-    if (!content) continue;
-    const offset = text.indexOf(content, cursor);
-    if (offset === -1) continue;
-    cursor = offset + content.length;
-    if (position >= offset && position < cursor) return i;
-  }
-  return undefined;
-}
 
 export const cacheBuster = defineRule({
   id: "cache-buster",
