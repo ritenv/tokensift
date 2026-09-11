@@ -17,6 +17,7 @@ export const OPENAI_MODEL_FAMILY: Record<string, OpenAiFamily> = {
   "gpt-5-pro": "o200k_base",
   "gpt-5-chat-latest": "o200k_base",
   "gpt-5-codex": "o200k_base",
+  "gpt-6-astra": "o200k_base",
   o1: "o200k_base",
   "o1-mini": "o200k_base",
   "o1-pro": "o200k_base",

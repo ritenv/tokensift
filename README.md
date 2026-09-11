@@ -477,7 +477,7 @@ expect.extend(matchers);
 
 | Family | Models | Confidence |
 | --- | --- | --- |
-| `o200k_base` | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `chatgpt-4o-latest`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5-chat-latest`, `gpt-5-codex`, `o1`, `o1-mini`, `o1-pro`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`, `codex-mini-latest`, `computer-use-preview` | exact |
+| `o200k_base` | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `chatgpt-4o-latest`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5-chat-latest`, `gpt-5-codex`, `gpt-6-astra`, `o1`, `o1-mini`, `o1-pro`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`, `codex-mini-latest`, `computer-use-preview` | exact |
 | `cl100k_base` | `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo` | exact |
 | anthropic | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` | estimate |
 
