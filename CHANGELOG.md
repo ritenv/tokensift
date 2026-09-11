@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.6.0
+
+### Minor Changes
+
+- d683506: Register gpt-6-astra (o200k_base) and refresh bundled pricing data
+
 ## 1.5.0
 
 ### Minor Changes
