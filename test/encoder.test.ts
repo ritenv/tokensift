@@ -12,6 +12,12 @@ describe("resolveEncoder", () => {
     expect(resolveEncoder("gpt-4").family).toBe("cl100k_base");
   });
 
+  it("gives an exact o200k_base encoder for gpt-6-astra", () => {
+    const encoder = resolveEncoder("gpt-6-astra");
+    expect(encoder.mode).toBe("exact");
+    expect(encoder.family).toBe("o200k_base");
+  });
+
   it("throws a clear error for a claude model with no calibration data", () => {
     expect(() => resolveEncoder("claude-not-a-real-one")).toThrow(/no calibration data/);
   });

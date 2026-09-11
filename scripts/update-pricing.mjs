@@ -32,6 +32,7 @@ const SUPPORTED_MODELS = [
   "gpt-5-pro",
   "gpt-5-chat-latest",
   "gpt-5-codex",
+  "gpt-6-astra",
   "o1",
   "o1-pro",
   "o3",
