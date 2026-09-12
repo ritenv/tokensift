@@ -18,6 +18,15 @@ describe("resolveEncoder", () => {
     expect(encoder.family).toBe("o200k_base");
   });
 
+  it.each(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])(
+    "gives an exact o200k_base encoder for %s",
+    (model) => {
+      const encoder = resolveEncoder(model);
+      expect(encoder.mode).toBe("exact");
+      expect(encoder.family).toBe("o200k_base");
+    },
+  );
+
   it("throws a clear error for a claude model with no calibration data", () => {
     expect(() => resolveEncoder("claude-not-a-real-one")).toThrow(/no calibration data/);
   });
