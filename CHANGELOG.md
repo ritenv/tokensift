@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.7.0
+
+### Minor Changes
+
+- b80ff51: Register gpt-5.6-sol, gpt-5.6-terra, and gpt-5.6-luna (o200k_base) and refresh bundled pricing data
+
 ## 1.6.0
 
 ### Minor Changes
