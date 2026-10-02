@@ -1,5 +1,11 @@
 # tokensift
 
+## 1.7.1
+
+### Patch Changes
+
+- 7a3e81e: Added support for gpt6 models, as well as some missed gpt5 variants
+
 ## 1.7.0
 
 ### Minor Changes
