@@ -15,26 +15,39 @@ const SOURCE_URL =
 // Kept in sync by hand with src/encoders/registry.ts (OPENAI_MODEL_FAMILY)
 // and src/encoders/anthropic-calibration.ts (ANTHROPIC_CALIBRATIONS): only
 // pull pricing for models tokensift actually resolves an encoder for.
-// o1-mini is deliberately absent: it's in OPENAI_MODEL_FAMILY (gpt-tokenizer
-// still ships its rank data) but LiteLLM no longer tracks pricing for it,
-// superseded by o3-mini/o4-mini. Finding.cost is undefined for it, same
-// documented, expected case as any model with no bundled pricing row.
+// o1-mini, chatgpt-4o-latest, and codex-mini-latest are deliberately absent:
+// all three are in OPENAI_MODEL_FAMILY (gpt-tokenizer still ships their rank
+// data) but LiteLLM no longer tracks pricing for them, retired/superseded.
+// Finding.cost is undefined for them, same documented, expected case as any
+// model with no bundled pricing row.
 const SUPPORTED_MODELS = [
   "gpt-4o",
   "gpt-4o-mini",
   "gpt-4.1",
   "gpt-4.1-mini",
   "gpt-4.1-nano",
-  "chatgpt-4o-latest",
   "gpt-5",
   "gpt-5-mini",
   "gpt-5-nano",
   "gpt-5-pro",
   "gpt-5-chat-latest",
   "gpt-5-codex",
+  "gpt-5.1",
+  "gpt-5.2",
+  "gpt-5.2-pro",
+  "gpt-5.3-codex",
+  "gpt-5.4",
+  "gpt-5.4-pro",
+  "gpt-5.4-mini",
+  "gpt-5.4-nano",
+  "gpt-5.5",
+  "gpt-5.5-pro",
   "gpt-5.6-sol",
   "gpt-5.6-terra",
   "gpt-5.6-luna",
+  "gpt-6-sol",
+  "gpt-6-luna",
+  "gpt-6.1-sol",
   "gpt-6-astra",
   "o1",
   "o1-pro",
@@ -42,7 +55,6 @@ const SUPPORTED_MODELS = [
   "o3-mini",
   "o3-pro",
   "o4-mini",
-  "codex-mini-latest",
   "computer-use-preview",
   "gpt-4-turbo",
   "gpt-4",

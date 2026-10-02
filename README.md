@@ -477,7 +477,7 @@ expect.extend(matchers);
 
 | Family | Models | Confidence |
 | --- | --- | --- |
-| `o200k_base` | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `chatgpt-4o-latest`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5-chat-latest`, `gpt-5-codex`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-astra`, `o1`, `o1-mini`, `o1-pro`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`, `codex-mini-latest`, `computer-use-preview` | exact |
+| `o200k_base` | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `chatgpt-4o-latest`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5-chat-latest`, `gpt-5-codex`, `gpt-5.1`, `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.3-codex`, `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6.1-sol`, `gpt-6-astra`, `o1`, `o1-mini`, `o1-pro`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`, `codex-mini-latest`, `computer-use-preview` | exact |
 | `cl100k_base` | `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo` | exact |
 | anthropic | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` | estimate |
 
