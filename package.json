@@ -53,6 +53,16 @@
         "types": "./dist/encoders/cl100k.d.cts",
         "default": "./dist/encoders/cl100k.cjs"
       }
+    },
+    "./rules/*": {
+      "import": {
+        "types": "./dist/rules/*.d.ts",
+        "default": "./dist/rules/*.js"
+      },
+      "require": {
+        "types": "./dist/rules/*.d.cts",
+        "default": "./dist/rules/*.cjs"
+      }
     }
   },
   "main": "./dist/index.cjs",
@@ -62,7 +72,8 @@
     "*": {
       "matchers": ["./dist/matchers.d.ts"],
       "encoders/o200k": ["./dist/encoders/o200k.d.ts"],
-      "encoders/cl100k": ["./dist/encoders/cl100k.d.ts"]
+      "encoders/cl100k": ["./dist/encoders/cl100k.d.ts"],
+      "rules/*": ["./dist/rules/*.d.ts"]
     }
   },
   "bin": {

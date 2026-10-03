@@ -268,6 +268,8 @@ const report = analyze(prompt, {
 
 These are separate build entries, not just separate exports, importing one subpath skips the other family's data. Measured with esbuild: everything gzips to about 1.6MB, one family gzips to about 1.13MB.
 
+Individual rules are separate build entries too, `tokensift/rules/filler`, `tokensift/rules/uuid-bloat`, and so on, for building a custom rule set (see [Custom rules](#custom-rules)) without pulling in every other rule. Most are a few KB; `encoder-mismatch` is the exception, it needs the real encoder data to do its job.
+
 ## CLI
 
 Same engine, from a terminal. Point it at a file, a glob, or stdin:
