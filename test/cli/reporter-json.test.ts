@@ -4,8 +4,8 @@ import { formatJson } from "../../src/cli/reporter-json.js";
 import { uuidBloat } from "../../src/rules/uuid-bloat.js";
 
 describe("formatJson", () => {
-  it("produces one valid JSON document for the whole run", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("produces one valid JSON document for the whole run", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -21,9 +21,9 @@ describe("formatJson", () => {
     expect(parsed.results[0].summary.totalTokens).toBeGreaterThan(0);
   });
 
-  it("aggregates multiple files into one results array", () => {
-    const clean = analyze("summarize the ticket", { model: "gpt-4o", rules: [uuidBloat] });
-    const dirty = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("aggregates multiple files into one results array", async () => {
+    const clean = await analyze("summarize the ticket", { model: "gpt-4o", rules: [uuidBloat] });
+    const dirty = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });

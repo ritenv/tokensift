@@ -4,9 +4,9 @@ import { formatSarif } from "../../src/cli/reporter-sarif.js";
 import { uuidBloat } from "../../src/rules/uuid-bloat.js";
 
 describe("formatSarif", () => {
-  it("produces a valid SARIF 2.1.0 log with one result per finding", () => {
+  it("produces a valid SARIF 2.1.0 log with one result per finding", async () => {
     const text = "id: 550e8400-e29b-41d4-a716-446655440000";
-    const report = analyze(text, { model: "gpt-4o", rules: [uuidBloat] });
+    const report = await analyze(text, { model: "gpt-4o", rules: [uuidBloat] });
 
     const output = formatSarif([{ file: "a.txt", report, text }]);
     const parsed = JSON.parse(output);
@@ -23,8 +23,8 @@ describe("formatSarif", () => {
     expect(parsed.runs[0].results[0].locations[0].physicalLocation.region.startLine).toBe(1);
   });
 
-  it("maps severity to SARIF's level enum for all three severities", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("maps severity to SARIF's level enum for all three severities", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -45,8 +45,8 @@ describe("formatSarif", () => {
     ]);
   });
 
-  it("dedupes rule metadata across multiple findings from the same rule", () => {
-    const report = analyze(
+  it("dedupes rule metadata across multiple findings from the same rule", async () => {
+    const report = await analyze(
       "id: 550e8400-e29b-41d4-a716-446655440000, id: 6ba7b810-9dad-11d1-80b4-00c04fd430c8",
       { model: "gpt-4o", rules: [uuidBloat] },
     );
@@ -57,8 +57,8 @@ describe("formatSarif", () => {
     expect(parsed.runs[0].tool.driver.rules[0].id).toBe("uuid-bloat");
   });
 
-  it("omits region when the original text isn't available (non-string input)", () => {
-    const report = analyze(
+  it("omits region when the original text isn't available (non-string input)", async () => {
+    const report = await analyze(
       [{ role: "user", content: "id: 550e8400-e29b-41d4-a716-446655440000" }],
       {
         model: "gpt-4o",
@@ -73,8 +73,8 @@ describe("formatSarif", () => {
     );
   });
 
-  it("produces an empty results array and rules array when there are no findings", () => {
-    const report = analyze("nothing wasteful here", { model: "gpt-4o", rules: [uuidBloat] });
+  it("produces an empty results array and rules array when there are no findings", async () => {
+    const report = await analyze("nothing wasteful here", { model: "gpt-4o", rules: [uuidBloat] });
     const parsed = JSON.parse(
       formatSarif([{ file: "a.txt", report, text: "nothing wasteful here" }]),
     );

@@ -7,7 +7,7 @@ import { dyn, t } from "../src/tag.js";
 import type { Message, TokenClass } from "../src/types.js";
 
 // A minimal rule that just flags every occurrence of the word "please",
-// enough to prove findings flow through analyze() without pulling in a real
+// enough to prove findings flow through await analyze() without pulling in a real
 // rule (uuid-bloat lands in its own commit).
 const flagsPlease: Rule = {
   id: "flags-please",
@@ -31,8 +31,8 @@ const flagsPlease: Rule = {
 };
 
 describe("analyze", () => {
-  it("tokenizes a plain string and runs the configured rules", () => {
-    const report = analyze("could you please help me", {
+  it("tokenizes a plain string and runs the configured rules", async () => {
+    const report = await analyze("could you please help me", {
       model: "gpt-4o",
       rules: [flagsPlease],
     });
@@ -43,7 +43,7 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(1);
   });
 
-  it("does not double-count totalWasteTokens when two rules claim savings on the exact same range", () => {
+  it("does not double-count totalWasteTokens when two rules claim savings on the exact same range", async () => {
     const makeOverlapRule = (id: string, saved: number): Rule => ({
       id,
       defaultSeverity: "info",
@@ -63,7 +63,7 @@ describe("analyze", () => {
       },
     });
 
-    const report = analyze("some overlapping json region here", {
+    const report = await analyze("some overlapping json region here", {
       model: "gpt-4o",
       rules: [makeOverlapRule("rule-a", 30), makeOverlapRule("rule-b", 50)],
     });
@@ -76,7 +76,7 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(50);
   });
 
-  it("sums totalWasteTokens across findings whose ranges don't overlap", () => {
+  it("sums totalWasteTokens across findings whose ranges don't overlap", async () => {
     const makeRule = (id: string, range: [number, number], saved: number): Rule => ({
       id,
       defaultSeverity: "info",
@@ -96,7 +96,7 @@ describe("analyze", () => {
       },
     });
 
-    const report = analyze("some non overlapping regions in this text here", {
+    const report = await analyze("some non overlapping regions in this text here", {
       model: "gpt-4o",
       rules: [makeRule("rule-a", [0, 5], 10), makeRule("rule-b", [20, 25], 15)],
     });
@@ -104,7 +104,7 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(25);
   });
 
-  it("sums totalWasteTokens for a narrow fix nested inside a broader one, since they're composable, not alternatives", () => {
+  it("sums totalWasteTokens for a narrow fix nested inside a broader one, since they're composable, not alternatives", async () => {
     const makeRule = (id: string, range: [number, number], saved: number): Rule => ({
       id,
       defaultSeverity: "info",
@@ -126,7 +126,7 @@ describe("analyze", () => {
 
     // e.g. row-json restructuring a whole array (range [0, 100]) and digit-fragmentation
     // shortening one timestamp nested inside it (range [10, 20]) -- a user can apply both.
-    const report = analyze("a region with a nested sub-region inside it, long enough", {
+    const report = await analyze("a region with a nested sub-region inside it, long enough", {
       model: "gpt-4o",
       rules: [makeRule("outer-rule", [0, 100], 1000), makeRule("inner-rule", [10, 20], 50)],
     });
@@ -134,24 +134,24 @@ describe("analyze", () => {
     expect(report.summary.totalWasteTokens).toBe(1050);
   });
 
-  it("defaults to every builtin rule when rules isn't passed", () => {
+  it("defaults to every builtin rule when rules isn't passed", async () => {
     const uuid = "550e8400-e29b-41d4-a716-446655440000";
-    const report = analyze(`Ticket ${uuid}`, { model: "gpt-4o" });
+    const report = await analyze(`Ticket ${uuid}`, { model: "gpt-4o" });
     expect(report.findings.some((f) => f.ruleId === "uuid-bloat")).toBe(true);
     expect(Object.keys(report.byRule).length).toBeGreaterThan(1);
   });
 
-  it("returns no findings when rules: [] is passed explicitly", () => {
-    const report = analyze("anything at all", { model: "gpt-4o", rules: [] });
+  it("returns no findings when rules: [] is passed explicitly", async () => {
+    const report = await analyze("anything at all", { model: "gpt-4o", rules: [] });
     expect(report.findings).toEqual([]);
     expect(report.byRule).toEqual({});
   });
 
-  it("splits static and dynamic budget for a tagged prompt", () => {
+  it("splits static and dynamic budget for a tagged prompt", async () => {
     const prompt = t`You are a support agent.
 Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
 
-    const report = analyze(prompt, { model: "gpt-4o" });
+    const report = await analyze(prompt, { model: "gpt-4o" });
     expect(report.summary.dynamicBudget).toBeGreaterThan(0);
     expect(report.summary.staticTokens).toBe(
       report.summary.totalTokens - report.summary.dynamicBudget,
@@ -159,7 +159,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
   });
 
   // reports ctx.slots' ranges as findings, so tests can assert exact rebased positions
-  // through the public Report shape rather than reaching into analyze()'s internals
+  // through the public Report shape rather than reaching into await analyze()'s internals
   const reportsSlotRanges: Rule = {
     id: "reports-slot-ranges",
     defaultSeverity: "info",
@@ -177,14 +177,14 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     },
   };
 
-  it("rebases a message's own slots to their real position in the joined text (Message[] input)", () => {
+  it("rebases a message's own slots to their real position in the joined text (Message[] input)", async () => {
     const built = t`ticket id: ${dyn("id", { value: "TCK-1" })}`;
     const messages: Message[] = [
       { role: "system", content: "You are terse." },
       { role: "user", content: built.text, slots: built.slots },
     ];
 
-    const report = analyze(messages, { model: "gpt-4o", rules: [reportsSlotRanges] });
+    const report = await analyze(messages, { model: "gpt-4o", rules: [reportsSlotRanges] });
     expect(report.findings).toHaveLength(1);
     const [from, to] = report.findings[0]!.loc.range;
 
@@ -192,15 +192,18 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(joined.slice(from, to)).toBe("TCK-1");
   });
 
-  it("rebases slots correctly in Payload input, matching filter(Boolean) when system is absent", () => {
+  it("rebases slots correctly in Payload input, matching filter(Boolean) when system is absent", async () => {
     const built = t`user says: ${dyn("msg", { value: "hello there" })}`;
     const messages: Message[] = [{ role: "user", content: built.text, slots: built.slots }];
 
-    const withSystem = analyze(
+    const withSystem = await analyze(
       { system: "be terse", messages },
       { model: "gpt-4o", rules: [reportsSlotRanges] },
     );
-    const withoutSystem = analyze({ messages }, { model: "gpt-4o", rules: [reportsSlotRanges] });
+    const withoutSystem = await analyze(
+      { messages },
+      { model: "gpt-4o", rules: [reportsSlotRanges] },
+    );
 
     const [fromWith, toWith] = withSystem.findings[0]!.loc.range;
     const joinedWith = ["be terse", built.text].join("\n");
@@ -213,17 +216,17 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(fromWithout).toBe(built.text.indexOf("hello there"));
   });
 
-  it("joins Message[] content for analysis and keeps the messages on the context", () => {
+  it("joins Message[] content for analysis and keeps the messages on the context", async () => {
     const messages: Message[] = [
       { role: "system", content: "You are terse." },
       { role: "user", content: "please summarize this" },
     ];
 
-    const report = analyze(messages, { model: "gpt-4o", rules: [flagsPlease] });
+    const report = await analyze(messages, { model: "gpt-4o", rules: [flagsPlease] });
     expect(report.findings).toHaveLength(1);
   });
 
-  it("applyFixes applies every fix from every rule when no ruleIds filter is given", () => {
+  it("applyFixes applies every fix from every rule when no ruleIds filter is given", async () => {
     const upperFirstWord: Rule = {
       id: "upper-first-word",
       defaultSeverity: "info",
@@ -264,7 +267,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
       },
     };
 
-    const report = analyze("the quick fox", {
+    const report = await analyze("the quick fox", {
       model: "gpt-4o",
       rules: [upperFirstWord, upperLastWord],
     });
@@ -274,15 +277,15 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(report.applyFixes({ ruleIds: [] })).toBe("the quick fox");
   });
 
-  it("applyFixes is a no-op when nothing has a fix", () => {
-    const report = analyze("could you please help me", {
+  it("applyFixes is a no-op when nothing has a fix", async () => {
+    const report = await analyze("could you please help me", {
       model: "gpt-4o",
       rules: [flagsPlease],
     });
     expect(report.applyFixes()).toBe("could you please help me");
   });
 
-  it("applyFixes keeps the first of two overlapping fixes, including a same-start tie", () => {
+  it("applyFixes keeps the first of two overlapping fixes, including a same-start tie", async () => {
     const overlapping: Rule = {
       id: "overlapping",
       defaultSeverity: "info",
@@ -323,12 +326,12 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
       },
     };
 
-    const report = analyze("abcdefgh", { model: "gpt-4o", rules: [overlapping] });
+    const report = await analyze("abcdefgh", { model: "gpt-4o", rules: [overlapping] });
     expect(report.applyFixes()).toBe("AAAdefgh");
   });
 
-  it("attaches Finding.cost when pricing data exists for the model", () => {
-    const report = analyze("could you please help me", {
+  it("attaches Finding.cost when pricing data exists for the model", async () => {
+    const report = await analyze("could you please help me", {
       model: "gpt-4o",
       rules: [flagsPlease],
     });
@@ -340,8 +343,8 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(report.findings[0]?.cost?.atVolume).toBeUndefined();
   });
 
-  it("projects Finding.cost.atVolume when volume is configured", () => {
-    const report = analyze("could you please help me", {
+  it("projects Finding.cost.atVolume when volume is configured", async () => {
+    const report = await analyze("could you please help me", {
       model: "gpt-4o",
       rules: [flagsPlease],
       volume: { requestsPerDay: 1000 },
@@ -349,7 +352,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(report.findings[0]?.cost?.atVolume?.amount).toBeGreaterThan(0);
   });
 
-  it("leaves Finding.cost undefined for a model with no pricing data", () => {
+  it("leaves Finding.cost undefined for a model with no pricing data", async () => {
     const emptyHistogram: Record<TokenClass, number> = {
       word: 0,
       punct: 0,
@@ -376,7 +379,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
       }),
     };
 
-    const report = analyze("please help", {
+    const report = await analyze("please help", {
       model: "custom-model",
       rules: [flagsPlease],
       encoder: stubEncoder,
@@ -384,7 +387,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(report.findings[0]?.cost).toBeUndefined();
   });
 
-  it("report.summary.cost sums every finding's cost", () => {
+  it("report.summary.cost sums every finding's cost", async () => {
     const flagsTwoWords: Rule = {
       id: "flags-two-words",
       defaultSeverity: "info",
@@ -405,7 +408,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
       },
     };
 
-    const report = analyze("could you please help me", {
+    const report = await analyze("could you please help me", {
       model: "gpt-4o",
       rules: [flagsTwoWords],
     });
@@ -417,8 +420,8 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(report.summary.cost?.per1000Calls.amount).toBeCloseTo(expectedPerCall * 1000);
   });
 
-  it("report.summary.cost.atVolume is only set when every finding has one", () => {
-    const report = analyze("could you please help me", {
+  it("report.summary.cost.atVolume is only set when every finding has one", async () => {
+    const report = await analyze("could you please help me", {
       model: "gpt-4o",
       rules: [flagsPlease],
       volume: { requestsPerDay: 1000 },
@@ -426,13 +429,13 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(report.summary.cost?.atVolume?.amount).toBeGreaterThan(0);
   });
 
-  it("report.summary.cost is undefined when nothing has pricing data", () => {
-    const report = analyze("summarize the ticket", { model: "gpt-4o" });
+  it("report.summary.cost is undefined when nothing has pricing data", async () => {
+    const report = await analyze("summarize the ticket", { model: "gpt-4o" });
     expect(report.findings).toHaveLength(0);
     expect(report.summary.cost).toBeUndefined();
   });
 
-  it("gives rules an indent map, one entry per line", () => {
+  it("gives rules an indent map, one entry per line", async () => {
     let seen: number[] = [];
     const capturesIndent: Rule = {
       id: "captures-indent",
@@ -444,7 +447,7 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
       },
     };
 
-    analyze("no indent\n    four spaces\n\teight-ish (tab)", {
+    await analyze("no indent\n    four spaces\n\teight-ish (tab)", {
       model: "gpt-4o",
       rules: [capturesIndent],
     });
@@ -452,12 +455,12 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(seen).toEqual([0, 4, 1]);
   });
 
-  it("counts a Payload's tools toward totalTokens, not just system/messages", () => {
-    const withoutTools = analyze(
+  it("counts a Payload's tools toward totalTokens, not just system/messages", async () => {
+    const withoutTools = await analyze(
       { system: "You are an agent.", tools: [] },
       { model: "gpt-4o", rules: [] },
     );
-    const withTools = analyze(
+    const withTools = await analyze(
       {
         system: "You are an agent.",
         tools: [{ name: "send_email", description: "Send an email", parameters: { to: "string" } }],
@@ -468,21 +471,21 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     expect(withTools.summary.totalTokens).toBeGreaterThan(withoutTools.summary.totalTokens);
   });
 
-  it("lets pretty-json/row-json fire on a Payload's tools, same as any other embedded JSON", () => {
+  it("lets pretty-json/row-json fire on a Payload's tools, same as any other embedded JSON", async () => {
     const rows = [
       { name: "a", description: "d", parameters: {} },
       { name: "b", description: "d", parameters: {} },
       { name: "c", description: "d", parameters: {} },
     ];
-    const report = analyze(
+    const report = await analyze(
       { system: "You are an agent.", tools: rows },
       { model: "gpt-4o", rules: builtinRules },
     );
     expect(report.findings.some((f) => f.ruleId === "row-json")).toBe(true);
   });
 
-  it("surfaces options.path on every finding's loc.input.path", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("surfaces options.path on every finding's loc.input.path", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       path: "prompts/support.md",
     });
@@ -492,8 +495,8 @@ Ticket: ${dyn("ticketBody", { value: "my billing failed twice this month" })}`;
     }
   });
 
-  it("leaves loc.input.path undefined when no path is given, same as before", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", { model: "gpt-4o" });
+  it("leaves loc.input.path undefined when no path is given, same as before", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", { model: "gpt-4o" });
     expect(report.findings[0]?.loc.input.path).toBeUndefined();
   });
 });

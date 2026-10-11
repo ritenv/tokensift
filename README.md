@@ -15,6 +15,7 @@ Deterministic, local, tokenizer-level static analysis of prompt strings, `Messag
 
 - [What is this?](#what-is-this)
 - [Install](#install)
+- [Migrating from v1](#migrating-from-v1)
 - [Quickstart](#quickstart)
   - [Template slots](#template-slots)
   - [Custom rules](#custom-rules)
@@ -52,9 +53,32 @@ Two ways to use it: as a library, called from your own code or test suite, or as
 pnpm add tokensift
 ```
 
+## Migrating from v1
+
+`analyze()`, `tokenize()`, `resolveEncoder()`, `budget()`, `createLinter(...).analyze`, and the three test matchers (`toBeUnderTokens`, `toHaveNoTokensiftErrors`, `toMatchTokenBaseline`) are all `async` now. Add `await` wherever you call them:
+
+```diff
+-const report = analyze(prompt, { model: "gpt-4o" });
++const report = await analyze(prompt, { model: "gpt-4o" });
+```
+
+```diff
+-expect(prompt).toBeUnderTokens(2000, { model: "gpt-4o" });
++await expect(prompt).toBeUnderTokens(2000, { model: "gpt-4o" });
+```
+
+If you construct `OpenAiEncoder` directly rather than going through `resolveEncoder()`, its constructor is now private; use the async factory instead:
+
+```diff
+-const encoder = new OpenAiEncoder("gpt-4o");
++const encoder = await OpenAiEncoder.create("gpt-4o");
+```
+
+Everything else is unchanged.
+
 ## Quickstart
 
-A support-ticket classifier prompt with two few-shot examples, a ticket id, and an output schema, the kind of thing that grows by copy-paste. `analyze()` runs every builtin rule by default:
+A support-ticket classifier prompt with two few-shot examples, a ticket id, and an output schema, the kind of thing that grows by copy-paste. `analyze()` runs every builtin rule by default.
 
 ```ts
 import { analyze } from "tokensift";
@@ -80,7 +104,7 @@ Output using this schema:
   "confidence": "number"
 }`;
 
-const report = analyze(prompt, { model: "gpt-4o" });
+const report = await analyze(prompt, { model: "gpt-4o" });
 console.log(report.findings);
 ```
 
@@ -177,7 +201,7 @@ const live = buildTicketPrompt(realTicketBody).text;
 It matters for token analysis too. Without `dyn()`, that region gets mis-tokenized as static text. With it, `analyze()` splits static cost from dynamic budget, pass a representative value when you don't have real data yet, offline or in CI:
 
 ```ts
-const report = analyze(buildTicketPrompt("my billing failed twice"), { model: "gpt-4o" });
+const report = await analyze(buildTicketPrompt("my billing failed twice"), { model: "gpt-4o" });
 report.summary.staticTokens;
 report.summary.dynamicBudget;
 ```
@@ -204,7 +228,7 @@ const noAllCaps = defineRule({
 const linter = createLinter(
   defineConfig({ model: "gpt-4o", customRules: [noAllCaps] }),
 );
-const report = linter.analyze(prompt);
+const report = await linter.analyze(prompt);
 ```
 
 `customRules` runs alongside every builtin rule, not instead of them. Severity overrides in `rules: { ... }` match a custom rule's `id` the same way they match a builtin's.
@@ -216,7 +240,7 @@ Works out of the box. Supabase Edge Functions run on Deno, and the `analyze`/`bu
 ```ts
 import { analyze } from "npm:tokensift";
 
-const report = analyze(prompt, { model: "gpt-4o" });
+const report = await analyze(prompt, { model: "gpt-4o" });
 ```
 
 No config, no import map, no shims.
@@ -228,7 +252,7 @@ Works out of the box. Netlify Edge Functions run on Deno, and the `analyze`/`bud
 ```ts
 import { analyze } from "npm:tokensift";
 
-const report = analyze(prompt, { model: "gpt-4o" });
+const report = await analyze(prompt, { model: "gpt-4o" });
 ```
 
 No config, no import map, no shims.
@@ -240,7 +264,7 @@ Works out of the box, no `nodejs_compat` flag needed:
 ```ts
 import { analyze } from "tokensift";
 
-const report = analyze(prompt, { model: "gpt-4o" });
+const report = await analyze(prompt, { model: "gpt-4o" });
 ```
 
 Cloudflare's compressed-size limit is 3MB on Free, 10MB on Paid. tokensift gzips to about 1.6MB, well under either.
@@ -251,22 +275,20 @@ Use the regular Node.js runtime on Vercel, not the Edge Runtime. It works fully 
 
 ### Edge and bundle-size-conscious environments
 
-The default `import { analyze } from "tokensift"` path loads both OpenAI tokenizer families, convenient, but real weight if you only ever use one model. Worth trimming on Supabase or Netlify Edge Functions, both enforce a compressed bundle-size limit.
+`import { analyze } from "tokensift"` only loads the OpenAI tokenizer family it actually needs, not both. With a bundler that code-splits dynamic imports (webpack, Vite/Rollup, Next.js all do by default), the part that loads immediately is about 41KB minified / 13.5KB gzipped; the ~2.6MB `o200k_base` or ~1MB `cl100k_base` rank table loads once you call `analyze()`/`tokenize()` with a model from that family.
 
-Import the family you need directly and pass it via `options.encoder` to skip loading the other one:
+If your bundler doesn't code-split dynamic imports, or you want to avoid the first-call latency of loading the rank table, import the family you need directly and pass it via `options.encoder`:
 
 ```ts
 import { analyze } from "tokensift";
 import { O200kBaseEncoder } from "tokensift/encoders/o200k"; // gpt-4o, gpt-4o-mini, gpt-4.1
 // import { Cl100kBaseEncoder } from "tokensift/encoders/cl100k"; // gpt-4, gpt-4-turbo, gpt-3.5-turbo
 
-const report = analyze(prompt, {
+const report = await analyze(prompt, {
   model: "gpt-4o",
   encoder: new O200kBaseEncoder("gpt-4o"),
 });
 ```
-
-These are separate build entries, not just separate exports, importing one subpath skips the other family's data. Measured with esbuild: everything gzips to about 1.6MB, one family gzips to about 1.13MB.
 
 Individual rules are separate build entries too, `tokensift/rules/filler`, `tokensift/rules/uuid-bloat`, and so on, for building a custom rule set (see [Custom rules](#custom-rules)) without pulling in every other rule. Most are a few KB; `encoder-mismatch` is the exception, it needs the real encoder data to do its job.
 
@@ -431,9 +453,9 @@ CLI flags win when both are set. Only JSON is supported for now, no `.js`/`.ts` 
 ```ts
 import "tokensift/matchers";
 
-expect(prompt).toBeUnderTokens(2000, { model: "gpt-4o" });
-expect(payload).toHaveNoTokensiftErrors({ model: "gpt-4o" });
-expect(prompt).toMatchTokenBaseline({ model: "gpt-4o" });
+await expect(prompt).toBeUnderTokens(2000, { model: "gpt-4o" });
+await expect(payload).toHaveNoTokensiftErrors({ model: "gpt-4o" });
+await expect(prompt).toMatchTokenBaseline({ model: "gpt-4o" });
 ```
 
 That auto-registration needs a global `expect`, which jest has by default and vitest only has with `test.globals: true`. Without globals, extend it yourself:

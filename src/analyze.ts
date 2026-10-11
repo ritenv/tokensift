@@ -26,8 +26,9 @@ export interface TokenizeOptions {
   model: string;
 }
 
-export function tokenize(text: string, options: TokenizeOptions): TokenView {
-  return resolveEncoder(options.model).tokenize(text);
+export async function tokenize(text: string, options: TokenizeOptions): Promise<TokenView> {
+  const encoder = await resolveEncoder(options.model);
+  return encoder.tokenize(text);
 }
 
 export interface AnalyzeOptions {
@@ -183,13 +184,13 @@ function sumSavingsDedupedByExactRange(findings: Finding[]): number {
   return total;
 }
 
-export function analyze(input: AnalysisInput, options: AnalyzeOptions): Report {
+export async function analyze(input: AnalysisInput, options: AnalyzeOptions): Promise<Report> {
   const normalized = normalize(input);
   const { text, messages, slots } = normalized;
   const inputRef = options.path
     ? { ...normalized.inputRef, path: options.path }
     : normalized.inputRef;
-  const encoder = options.encoder ?? resolveEncoder(options.model);
+  const encoder = options.encoder ?? (await resolveEncoder(options.model));
   const tokenView = encoder.tokenize(text);
   const pricing = resolvePricing(options.model, options.pricingOverrides);
 

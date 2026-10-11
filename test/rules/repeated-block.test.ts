@@ -6,37 +6,37 @@ const boilerplate =
   "Remember to respond only in valid JSON matching the schema above, with no extra prose or markdown fences.";
 
 describe("repeated-block", () => {
-  it("flags a boilerplate paragraph re-pasted across few-shot examples", () => {
+  it("flags a boilerplate paragraph re-pasted across few-shot examples", async () => {
     const prompt = [
       `Example 1: summarize this ticket. ${boilerplate}`,
       `Example 2: summarize this other ticket. ${boilerplate}`,
       `Example 3: summarize a third ticket. ${boilerplate}`,
     ].join("\n\n");
 
-    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
     expect(report.findings.length).toBeGreaterThan(0);
     const finding = report.findings[0]!;
     expect(finding.message).toContain("repeats 3 times");
     expect(finding.tokens.saved).toBeGreaterThan(0);
   });
 
-  it("does not flag short, incidental repeated words", () => {
-    const report = analyze("the ticket the customer the agent the ticket the customer", {
+  it("does not flag short, incidental repeated words", async () => {
+    const report = await analyze("the ticket the customer the agent the ticket the customer", {
       model: "gpt-4o",
       rules: [repeatedBlock],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("finds nothing in a prompt with no repetition", () => {
-    const report = analyze("summarize the attached document in three bullet points", {
+  it("finds nothing in a prompt with no repetition", async () => {
+    const report = await analyze("summarize the attached document in three bullet points", {
       model: "gpt-4o",
       rules: [repeatedBlock],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("reports a repeated line once, not once per overlapping-boundary variant", () => {
+  it("reports a repeated line once, not once per overlapping-boundary variant", async () => {
     // this reminder repeats 3 times overall, but only 2 of those 3
     // occurrences are followed by "Example", and only the other 2 have a
     // leading blank line before them -- so the suffix automaton legitimately
@@ -60,12 +60,12 @@ describe("repeated-block", () => {
       'Ticket 550e8400-e29b-41d4-a716-446655440000, from a customer: "refund please"',
     ].join("\n");
 
-    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
     expect(report.findings).toHaveLength(1);
     expect(report.findings[0]?.message).toContain("repeats 3 times");
   });
 
-  it("does not flag a repeated JSON key/punctuation fragment across array rows", () => {
+  it("does not flag a repeated JSON key/punctuation fragment across array rows", async () => {
     const prompt = JSON.stringify({
       results: [
         { id: 1, title: "Perplexity valuation reaches new high", url: "https://a.example.com/1" },
@@ -74,17 +74,17 @@ describe("repeated-block", () => {
       ],
     });
 
-    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
     expect(report.findings).toEqual([]);
   });
 
-  it("still flags a genuinely repeated value that appears both inside and outside JSON", () => {
+  it("still flags a genuinely repeated value that appears both inside and outside JSON", async () => {
     const prompt = [
       JSON.stringify({ created_by: "priya.nataraj@acmecorp.example.com" }),
       "New question from priya.nataraj@acmecorp.example.com: what's the total spend?",
     ].join("\n");
 
-    const report = analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [repeatedBlock] });
     expect(report.findings.length).toBeGreaterThan(0);
     expect(report.findings[0]?.message).toContain("repeats 2 times");
   });

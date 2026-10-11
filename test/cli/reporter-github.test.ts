@@ -4,9 +4,9 @@ import { formatGithub } from "../../src/cli/reporter-github.js";
 import { uuidBloat } from "../../src/rules/uuid-bloat.js";
 
 describe("formatGithub", () => {
-  it("emits one workflow command per finding, mapped by severity", () => {
+  it("emits one workflow command per finding, mapped by severity", async () => {
     const text = "id: 550e8400-e29b-41d4-a716-446655440000";
-    const report = analyze(text, { model: "gpt-4o", rules: [uuidBloat] });
+    const report = await analyze(text, { model: "gpt-4o", rules: [uuidBloat] });
 
     const output = formatGithub([{ file: "a.txt", report, text }]);
 
@@ -14,17 +14,17 @@ describe("formatGithub", () => {
     expect(output).toContain("costs 18 tokens");
   });
 
-  it("computes the correct line number for a finding past the first line", () => {
+  it("computes the correct line number for a finding past the first line", async () => {
     const text = "line one\nline two\nid: 550e8400-e29b-41d4-a716-446655440000";
-    const report = analyze(text, { model: "gpt-4o", rules: [uuidBloat] });
+    const report = await analyze(text, { model: "gpt-4o", rules: [uuidBloat] });
 
     const output = formatGithub([{ file: "a.txt", report, text }]);
 
     expect(output).toContain("line=3,endLine=3");
   });
 
-  it("omits line/endLine when the original text isn't available (non-string input)", () => {
-    const report = analyze(
+  it("omits line/endLine when the original text isn't available (non-string input)", async () => {
+    const report = await analyze(
       [{ role: "user", content: "id: 550e8400-e29b-41d4-a716-446655440000" }],
       {
         model: "gpt-4o",
@@ -38,8 +38,8 @@ describe("formatGithub", () => {
     expect(output).not.toContain("line=");
   });
 
-  it("escapes commas and colons in property values", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("escapes commas and colons in property values", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -49,8 +49,8 @@ describe("formatGithub", () => {
     expect(output).toContain("file=weird%2Cname%3Ahere.txt");
   });
 
-  it("produces no output when there are no findings", () => {
-    const report = analyze("nothing wasteful here", { model: "gpt-4o", rules: [uuidBloat] });
+  it("produces no output when there are no findings", async () => {
+    const report = await analyze("nothing wasteful here", { model: "gpt-4o", rules: [uuidBloat] });
     expect(formatGithub([{ file: "a.txt", report, text: "nothing wasteful here" }])).toBe("");
   });
 });

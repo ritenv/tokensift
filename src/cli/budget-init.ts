@@ -60,7 +60,7 @@ export async function runBudgetInit(argv: string[], cwd: string): Promise<RunRes
     const inputsByKey = Object.fromEntries(
       resolved.map(({ file, input }) => [relative(cwd, file), input]),
     );
-    const store = budget(inputsByKey, { model });
+    const store = await budget(inputsByKey, { model });
     const lines = Object.entries(store).map(([key, tokens]) => `${key}: ${tokens} tokens`);
     writeBudget(budgetPath, store);
     lines.push("", `wrote ${resolved.length} budget(s) to ${budgetPath}`);
