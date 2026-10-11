@@ -13,8 +13,8 @@ describe("public entry point", () => {
     expect(typeof tokensift.dyn).toBe("function");
   });
 
-  it("budget() is a real implementation, not a stub", () => {
-    const result = tokensift.budget(
+  it("budget() is a real implementation, not a stub", async () => {
+    const result = await tokensift.budget(
       { a: "short prompt", b: "a somewhat longer prompt with more words in it" },
       { model: "gpt-4o" },
     );

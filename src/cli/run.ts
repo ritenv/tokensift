@@ -66,16 +66,18 @@ async function runAnalyze(argv: string[], cwd: string): Promise<RunResult> {
     );
     const encoder = resolveAnthropicOverride(model, cwd, options.calibrationFile);
     const pricingOverrides = loadPricingOverrides(cwd, options.pricingFile);
-    const results = resolved.map(({ file, input }) => {
-      const path = relative(cwd, file);
-      const baseline = baselineStore[path];
-      const report = linter.analyze(input, { path, baseline, encoder, pricingOverrides });
-      // display file as the cwd-relative path (matches loc.input.path, and is
-      // what a github/markdown reporter needs to annotate the right file in a
-      // PR diff); "<stdin>" is a sentinel, not a real path, left untouched.
-      const displayFile = file === "<stdin>" ? file : path;
-      return { file: displayFile, report, text: typeof input === "string" ? input : undefined };
-    });
+    const results = await Promise.all(
+      resolved.map(async ({ file, input }) => {
+        const path = relative(cwd, file);
+        const baseline = baselineStore[path];
+        const report = await linter.analyze(input, { path, baseline, encoder, pricingOverrides });
+        // display file as the cwd-relative path (matches loc.input.path, and is
+        // what a github/markdown reporter needs to annotate the right file in a
+        // PR diff); "<stdin>" is a sentinel, not a real path, left untouched.
+        const displayFile = file === "<stdin>" ? file : path;
+        return { file: displayFile, report, text: typeof input === "string" ? input : undefined };
+      }),
+    );
 
     if (options.write) {
       for (let i = 0; i < resolved.length; i++) {

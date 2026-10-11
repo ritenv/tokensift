@@ -21,13 +21,13 @@ const calibration = {
 };
 
 describe("encoder-mismatch", () => {
-  it("does not fire on the normal path, no explicit encoder override", () => {
-    const report = analyze("hello world", { model: "gpt-4o", rules: [encoderMismatch] });
+  it("does not fire on the normal path, no explicit encoder override", async () => {
+    const report = await analyze("hello world", { model: "gpt-4o", rules: [encoderMismatch] });
     expect(report.findings).toEqual([]);
   });
 
-  it("does not fire when an explicit encoder's family agrees with the model", () => {
-    const report = analyze("hello world", {
+  it("does not fire when an explicit encoder's family agrees with the model", async () => {
+    const report = await analyze("hello world", {
       model: "gpt-4o",
       encoder: new O200kBaseEncoder("gpt-4o"),
       rules: [encoderMismatch],
@@ -35,8 +35,8 @@ describe("encoder-mismatch", () => {
     expect(report.findings).toEqual([]);
   });
 
-  it("fires when an explicit encoder's family disagrees with the model", () => {
-    const report = analyze("hello world", {
+  it("fires when an explicit encoder's family disagrees with the model", async () => {
+    const report = await analyze("hello world", {
       model: "gpt-4",
       encoder: new O200kBaseEncoder("gpt-4o"),
       rules: [encoderMismatch],
@@ -48,8 +48,8 @@ describe("encoder-mismatch", () => {
     expect(finding.tokens.saved).toBe(0);
   });
 
-  it("fires across providers too (anthropic encoder against an openai model string)", () => {
-    const report = analyze("hello world", {
+  it("fires across providers too (anthropic encoder against an openai model string)", async () => {
+    const report = await analyze("hello world", {
       model: "gpt-4o",
       encoder: new AnthropicEncoder("claude-custom", calibration),
       rules: [encoderMismatch],
@@ -58,8 +58,8 @@ describe("encoder-mismatch", () => {
     expect(report.findings[0]?.message).toContain("anthropic");
   });
 
-  it("does not fire when the model string doesn't resolve on its own (a locally-calibrated model resolveEncoder doesn't know about)", () => {
-    const report = analyze("hello world", {
+  it("does not fire when the model string doesn't resolve on its own (a locally-calibrated model resolveEncoder doesn't know about)", async () => {
+    const report = await analyze("hello world", {
       model: "claude-not-bundled",
       encoder: new AnthropicEncoder("claude-not-bundled", calibration),
       rules: [encoderMismatch],
@@ -67,8 +67,8 @@ describe("encoder-mismatch", () => {
     expect(report.findings).toEqual([]);
   });
 
-  it("does not fire against Cl100kBaseEncoder when the model genuinely is cl100k_base", () => {
-    const report = analyze("hello world", {
+  it("does not fire against Cl100kBaseEncoder when the model genuinely is cl100k_base", async () => {
+    const report = await analyze("hello world", {
       model: "gpt-4",
       encoder: new Cl100kBaseEncoder("gpt-4"),
       rules: [encoderMismatch],

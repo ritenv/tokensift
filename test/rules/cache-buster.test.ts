@@ -23,9 +23,9 @@ const CALIBRATION = {
 };
 
 describe("cache-buster", () => {
-  it("fires when dynamic content sits before a large static block", () => {
+  it("fires when dynamic content sits before a large static block", async () => {
     const prompt = t`${dyn("timestamp", { value: "2026-08-29T00:00:00Z" })}\n${STATIC_BLOCK}`;
-    const report = analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
+    const report = await analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
 
     expect(report.findings).toHaveLength(1);
     const finding = report.findings[0]!;
@@ -37,26 +37,29 @@ describe("cache-buster", () => {
     expect(finding.cost?.perCall.amount).toBeGreaterThan(0);
   });
 
-  it("does not fire when dynamic content is placed after the static block (correct ordering)", () => {
+  it("does not fire when dynamic content is placed after the static block (correct ordering)", async () => {
     const prompt = t`${STATIC_BLOCK}\n${dyn("timestamp", { value: "2026-08-29T00:00:00Z" })}`;
-    const report = analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
+    const report = await analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
     expect(report.findings).toEqual([]);
   });
 
-  it("does not fire when there are no dyn() slots at all", () => {
-    const report = analyze(STATIC_BLOCK, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
+  it("does not fire when there are no dyn() slots at all", async () => {
+    const report = await analyze(STATIC_BLOCK, {
+      model: "claude-sonnet-4-5",
+      rules: [cacheBuster],
+    });
     expect(report.findings).toEqual([]);
   });
 
-  it("does not fire when the lost static region is below the model's cache minimum", () => {
+  it("does not fire when the lost static region is below the model's cache minimum", async () => {
     const prompt = t`${dyn("id", { value: "u_123" })}\nshort static tail`;
-    const report = analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
+    const report = await analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
     expect(report.findings).toEqual([]);
   });
 
-  it("still fires with no cost when the model has no cache-read pricing data", () => {
+  it("still fires with no cost when the model has no cache-read pricing data", async () => {
     const prompt = t`${dyn("id", { value: "u_123" })}\n${STATIC_BLOCK}`;
-    const report = analyze(prompt, {
+    const report = await analyze(prompt, {
       model: "claude-not-bundled",
       encoder: new AnthropicEncoder("claude-not-bundled", CALIBRATION),
       rules: [cacheBuster],
@@ -65,22 +68,25 @@ describe("cache-buster", () => {
     expect(report.findings[0]?.cost).toBeUndefined();
   });
 
-  it("uses the conservative 2048-token floor for a model with no verified cache minimum", () => {
+  it("uses the conservative 2048-token floor for a model with no verified cache minimum", async () => {
     const marginal = "word ".repeat(1200); // comfortably over claude-sonnet-4-5's 1024 floor, under 2048
     const prompt = t`${dyn("id", { value: "u_123" })}\n${marginal}`;
-    const anthropicResult = analyze(prompt, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
-    const openaiResult = analyze(prompt, { model: "gpt-4o", rules: [cacheBuster] });
+    const anthropicResult = await analyze(prompt, {
+      model: "claude-sonnet-4-5",
+      rules: [cacheBuster],
+    });
+    const openaiResult = await analyze(prompt, { model: "gpt-4o", rules: [cacheBuster] });
     expect(anthropicResult.findings.length).toBeGreaterThan(0);
     expect(openaiResult.findings).toEqual([]);
   });
 
-  it("attributes the finding to the right message and rebases the slot range in Message[] input", () => {
+  it("attributes the finding to the right message and rebases the slot range in Message[] input", async () => {
     const built = t`${dyn("timestamp", { value: "2026-08-29T00:00:00Z" })}`;
     const messages: Message[] = [
       { role: "system", content: built.text, slots: built.slots },
       { role: "user", content: STATIC_BLOCK },
     ];
-    const report = analyze(messages, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
+    const report = await analyze(messages, { model: "claude-sonnet-4-5", rules: [cacheBuster] });
 
     expect(report.findings).toHaveLength(1);
     const finding = report.findings[0]!;

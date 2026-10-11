@@ -3,8 +3,8 @@ import { analyze } from "../../src/analyze.js";
 import { budgetExceeded } from "../../src/rules/budget-exceeded.js";
 
 describe("budget-exceeded", () => {
-  it("flags an input that exceeds the declared budget", () => {
-    const report = analyze("this prompt has more than a couple of tokens in it", {
+  it("flags an input that exceeds the declared budget", async () => {
+    const report = await analyze("this prompt has more than a couple of tokens in it", {
       model: "gpt-4o",
       rules: [budgetExceeded],
       budget: 5,
@@ -13,8 +13,8 @@ describe("budget-exceeded", () => {
     expect(report.findings[0]!.severity).toBe("error");
   });
 
-  it("stays quiet when the input is under budget", () => {
-    const report = analyze("short prompt", {
+  it("stays quiet when the input is under budget", async () => {
+    const report = await analyze("short prompt", {
       model: "gpt-4o",
       rules: [budgetExceeded],
       budget: 100,
@@ -22,8 +22,8 @@ describe("budget-exceeded", () => {
     expect(report.findings).toEqual([]);
   });
 
-  it("does nothing when no budget is configured", () => {
-    const report = analyze("this prompt has more than a couple of tokens in it", {
+  it("does nothing when no budget is configured", async () => {
+    const report = await analyze("this prompt has more than a couple of tokens in it", {
       model: "gpt-4o",
       rules: [budgetExceeded],
     });

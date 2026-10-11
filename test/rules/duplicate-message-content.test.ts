@@ -6,8 +6,8 @@ const systemPrompt =
   "You are a support agent. Always be polite, concise, and never share internal ticket ids with the customer.";
 
 describe("duplicate-message-content", () => {
-  it("flags a user message that repeats the system prompt verbatim, a template bug", () => {
-    const report = analyze(
+  it("flags a user message that repeats the system prompt verbatim, a template bug", async () => {
+    const report = await analyze(
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: systemPrompt },
@@ -22,8 +22,8 @@ describe("duplicate-message-content", () => {
     expect(finding.loc.messageIndex).toBe(1);
   });
 
-  it("does not flag two different messages with different content", () => {
-    const report = analyze(
+  it("does not flag two different messages with different content", async () => {
+    const report = await analyze(
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: "my order hasn't shipped yet" },
@@ -33,8 +33,8 @@ describe("duplicate-message-content", () => {
     expect(report.findings).toEqual([]);
   });
 
-  it("does not flag short, incidentally identical replies like 'thanks'", () => {
-    const report = analyze(
+  it("does not flag short, incidentally identical replies like 'thanks'", async () => {
+    const report = await analyze(
       [
         { role: "user", content: "thanks" },
         { role: "assistant", content: "you're welcome" },
@@ -45,8 +45,8 @@ describe("duplicate-message-content", () => {
     expect(report.findings).toEqual([]);
   });
 
-  it("does nothing for plain string input, no messages to compare", () => {
-    const report = analyze("summarize the ticket below", {
+  it("does nothing for plain string input, no messages to compare", async () => {
+    const report = await analyze("summarize the ticket below", {
       model: "gpt-4o",
       rules: [duplicateMessageContent],
     });

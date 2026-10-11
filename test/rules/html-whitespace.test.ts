@@ -19,9 +19,9 @@ const prettyHtml = `<div class="product-card">
 </div>`;
 
 describe("html-whitespace", () => {
-  it("flags pretty-printed HTML embedded in a prompt", () => {
+  it("flags pretty-printed HTML embedded in a prompt", async () => {
     const prompt = `summarize this:\n${prettyHtml}\nplease`;
-    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
 
     expect(report.findings).toHaveLength(1);
     const finding = report.findings[0]!;
@@ -29,49 +29,49 @@ describe("html-whitespace", () => {
     expect(finding.fix?.replacement).not.toContain("\n");
   });
 
-  it("does not flag HTML that's already on one line", () => {
+  it("does not flag HTML that's already on one line", async () => {
     const prompt = `<div class="a"><span>hi</span></div>`;
-    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
     expect(report.findings).toEqual([]);
   });
 
-  it("requires at least a few tags before treating something as HTML", () => {
-    const report = analyze("the price is <10 dollars, or maybe <5", {
+  it("requires at least a few tags before treating something as HTML", async () => {
+    const report = await analyze("the price is <10 dollars, or maybe <5", {
       model: "gpt-4o",
       rules: [htmlWhitespace],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("does not flag TypeScript generics as HTML (no closing tags, no attributes)", () => {
+  it("does not flag TypeScript generics as HTML (no closing tags, no attributes)", async () => {
     const prompt = `interface Config {
   names: Array<string>;
   ids: Array<number>;
   flags: Array<boolean>;
   tags: Array<string>;
 }`;
-    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
     expect(report.findings).toEqual([]);
   });
 
-  it("still flags real HTML mixed with a couple of generic-shaped tags", () => {
+  it("still flags real HTML mixed with a couple of generic-shaped tags", async () => {
     const prompt = `<div class="config">
   <span>Array<string> items</span>
   <span>Array<number> ids</span>
 </div>`;
-    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
     expect(report.findings.length).toBeGreaterThan(0);
   });
 
-  it("finds nothing when there's no HTML in the prompt", () => {
-    const report = analyze("summarize the ticket below in plain prose", {
+  it("finds nothing when there's no HTML in the prompt", async () => {
+    const report = await analyze("summarize the ticket below in plain prose", {
       model: "gpt-4o",
       rules: [htmlWhitespace],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("leaves pre/script/style content untouched in the fix", () => {
+  it("leaves pre/script/style content untouched in the fix", async () => {
     const prompt = `<div>
   <pre>
     line one
@@ -79,17 +79,17 @@ describe("html-whitespace", () => {
   </pre>
   <span>caption</span>
 </div>`;
-    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
     expect(report.findings[0]?.fix?.replacement).toContain("    line one\n    line two");
   });
 
-  it("does not touch a real single inline space between adjacent tags", () => {
+  it("does not touch a real single inline space between adjacent tags", async () => {
     const prompt = `<div>
   <b>bold</b> <i>italic</i>
   <b>bold</b> <i>italic</i>
   <b>bold</b> <i>italic</i>
 </div>`;
-    const report = analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
+    const report = await analyze(prompt, { model: "gpt-4o", rules: [htmlWhitespace] });
     expect(report.findings[0]?.fix?.replacement).toContain("<b>bold</b> <i>italic</i>");
   });
 });

@@ -65,20 +65,20 @@ function toTimestamp(p: TimestampParts): string {
 }
 
 describe("digit-fragmentation (property-based)", () => {
-  it("never crashes on arbitrary digit-heavy text", () => {
-    fc.assert(
-      fc.property(fc.string({ maxLength: 100 }), (text) => {
-        expect(() => analyze(text, { model: "gpt-4o", rules: [digitFragmentation] })).not.toThrow();
+  it("never crashes on arbitrary digit-heavy text", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.string({ maxLength: 100 }), async (text) => {
+        await analyze(text, { model: "gpt-4o", rules: [digitFragmentation] });
       }),
     );
   });
 
-  it("never flags a timestamp whose calendar date isn't really valid", () => {
-    fc.assert(
-      fc.property(timestampParts, (p) => {
+  it("never flags a timestamp whose calendar date isn't really valid", async () => {
+    await fc.assert(
+      fc.asyncProperty(timestampParts, async (p) => {
         fc.pre(!isReallyValidDate(p.year, p.month, p.day, p.hour, p.minute, p.second));
         const timestamp = toTimestamp(p);
-        const report = analyze(`event at ${timestamp} occurred`, {
+        const report = await analyze(`event at ${timestamp} occurred`, {
           model: "gpt-4o",
           rules: [digitFragmentation],
         });
@@ -87,12 +87,12 @@ describe("digit-fragmentation (property-based)", () => {
     );
   });
 
-  it("when it does fire, the suggested epoch value is numerically correct", () => {
-    fc.assert(
-      fc.property(timestampParts, (p) => {
+  it("when it does fire, the suggested epoch value is numerically correct", async () => {
+    await fc.assert(
+      fc.asyncProperty(timestampParts, async (p) => {
         fc.pre(isReallyValidDate(p.year, p.month, p.day, p.hour, p.minute, p.second));
         const timestamp = toTimestamp(p);
-        const report = analyze(`event at ${timestamp} occurred`, {
+        const report = await analyze(`event at ${timestamp} occurred`, {
           model: "gpt-4o",
           rules: [digitFragmentation],
         });

@@ -7,18 +7,18 @@ import { OpenAiEncoder } from "../../src/encoders/openai.js";
 const text = "order 4471 costs deadbeef tokens, roughly.";
 
 describe("O200kBaseEncoder / Cl100kBaseEncoder", () => {
-  it("O200kBaseEncoder matches OpenAiEncoder for an o200k_base model", () => {
+  it("O200kBaseEncoder matches OpenAiEncoder for an o200k_base model", async () => {
     const direct = new O200kBaseEncoder("gpt-4o");
-    const viaFamily = new OpenAiEncoder("gpt-4o");
+    const viaFamily = await OpenAiEncoder.create("gpt-4o");
     expect(direct.countTokens(text)).toBe(viaFamily.countTokens(text));
     expect(direct.tokenize(text)).toEqual(viaFamily.tokenize(text));
     expect(direct.family).toBe("o200k_base");
     expect(direct.mode).toBe("exact");
   });
 
-  it("Cl100kBaseEncoder matches OpenAiEncoder for a cl100k_base model", () => {
+  it("Cl100kBaseEncoder matches OpenAiEncoder for a cl100k_base model", async () => {
     const direct = new Cl100kBaseEncoder("gpt-4");
-    const viaFamily = new OpenAiEncoder("gpt-4");
+    const viaFamily = await OpenAiEncoder.create("gpt-4");
     expect(direct.countTokens(text)).toBe(viaFamily.countTokens(text));
     expect(direct.tokenize(text)).toEqual(viaFamily.tokenize(text));
     expect(direct.family).toBe("cl100k_base");
@@ -33,8 +33,8 @@ describe("O200kBaseEncoder / Cl100kBaseEncoder", () => {
     );
   });
 
-  it("analyze() accepts a directly-constructed per-family encoder via options.encoder, bypassing resolveEncoder", () => {
-    const report = analyze("a plain prompt with no waste", {
+  it("analyze() accepts a directly-constructed per-family encoder via options.encoder, bypassing resolveEncoder", async () => {
+    const report = await analyze("a plain prompt with no waste", {
       model: "gpt-4o",
       encoder: new O200kBaseEncoder("gpt-4o"),
       rules: [],

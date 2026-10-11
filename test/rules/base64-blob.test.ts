@@ -5,8 +5,8 @@ import { base64Blob } from "../../src/rules/base64-blob.js";
 const blob = Buffer.from("a".repeat(80)).toString("base64");
 
 describe("base64-blob", () => {
-  it("flags a standalone base64 blob pasted into a prompt", () => {
-    const report = analyze(`here is the attachment:\n${blob}\nplease summarize it`, {
+  it("flags a standalone base64 blob pasted into a prompt", async () => {
+    const report = await analyze(`here is the attachment:\n${blob}\nplease summarize it`, {
       model: "gpt-4o",
       rules: [base64Blob],
     });
@@ -14,8 +14,8 @@ describe("base64-blob", () => {
     expect(report.findings[0]!.severity).toBe("error");
   });
 
-  it("flags a data URI and doesn't double-count its payload", () => {
-    const report = analyze(`<img src="data:image/png;base64,${blob}">`, {
+  it("flags a data URI and doesn't double-count its payload", async () => {
+    const report = await analyze(`<img src="data:image/png;base64,${blob}">`, {
       model: "gpt-4o",
       rules: [base64Blob],
     });
@@ -23,35 +23,35 @@ describe("base64-blob", () => {
     expect(report.findings[0]!.message).toContain("chars");
   });
 
-  it("does not flag a long hex hash, that's not base64", () => {
+  it("does not flag a long hex hash, that's not base64", async () => {
     const sha256ish = "a1b2c3d4e5f6".repeat(6);
-    const report = analyze(`checksum: ${sha256ish}`, {
+    const report = await analyze(`checksum: ${sha256ish}`, {
       model: "gpt-4o",
       rules: [base64Blob],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("does not flag a short base64-ish token", () => {
-    const report = analyze("session=QWxhZGRpbjpvcGVuc2VzYW1l", {
+  it("does not flag a short base64-ish token", async () => {
+    const report = await analyze("session=QWxhZGRpbjpvcGVuc2VzYW1l", {
       model: "gpt-4o",
       rules: [base64Blob],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("flags a base64 blob immediately adjacent to underscores", () => {
+  it("flags a base64 blob immediately adjacent to underscores", async () => {
     const realistic =
       "SGVsbG8gV29ybGQhIFRoaXMgaXMgYSB0ZXN0IG9mIGJhc2U2NCBlbmNvZGluZyB3aXRoIG1peGVkIGNhc2UgbGV0dGVycyBRV0VSVFlVSU9QQVNERkdISktMWkNWQk5N";
-    const report = analyze(`img_${realistic}_end`, { model: "gpt-4o", rules: [base64Blob] });
+    const report = await analyze(`img_${realistic}_end`, { model: "gpt-4o", rules: [base64Blob] });
     expect(report.findings).toHaveLength(1);
     expect(report.findings[0]?.message).toContain("128 chars");
   });
 
-  it("flags a real JWT as a single finding, not fragmented per segment", () => {
+  it("flags a real JWT as a single finding, not fragmented per segment", async () => {
     const jwt =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-    const report = analyze(`Authorization: Bearer ${jwt}`, {
+    const report = await analyze(`Authorization: Bearer ${jwt}`, {
       model: "gpt-4o",
       rules: [base64Blob],
     });
@@ -59,24 +59,24 @@ describe("base64-blob", () => {
     expect(report.findings[0]?.message).toContain(`${jwt.length} chars`);
   });
 
-  it("does not flag a long dotted package name as base64url", () => {
-    const report = analyze(
+  it("does not flag a long dotted package name as base64url", async () => {
+    const report = await analyze(
       "import com.example.longcompanyname.applicationnamemodule.internalfeature;",
       { model: "gpt-4o", rules: [base64Blob] },
     );
     expect(report.findings).toEqual([]);
   });
 
-  it("does not flag a long dotted subdomain chain as base64url", () => {
-    const report = analyze(
+  it("does not flag a long dotted subdomain chain as base64url", async () => {
+    const report = await analyze(
       "host: api-gateway-service.internal-production-cluster.mycompanyname.example",
       { model: "gpt-4o", rules: [base64Blob] },
     );
     expect(report.findings).toEqual([]);
   });
 
-  it("does not flag a long CamelCase identifier, it's not base64", () => {
-    const report = analyze(
+  it("does not flag a long CamelCase identifier, it's not base64", async () => {
+    const report = await analyze(
       "the error occurred in ThisIsAVeryLongConcatenatedClassNameUsedInternallyForSomeSpecificPurpose during initialization",
       { model: "gpt-4o", rules: [base64Blob] },
     );
