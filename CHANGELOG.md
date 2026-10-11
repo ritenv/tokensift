@@ -1,5 +1,11 @@
 # tokensift
 
+## 2.0.0
+
+### Major Changes
+
+- 3bc8f84: analyze(), tokenize(), resolveEncoder(), budget(), createLinter(...).analyze, and the test matchers are now async. OpenAI tokenizer data now loads lazily via a dynamic import, only for the family actually used, instead of loading both eagerly. Migration: add await.
+
 ## 1.8.0
 
 ### Minor Changes
