@@ -4,8 +4,8 @@ import { formatMarkdown } from "../../src/cli/reporter-markdown.js";
 import { uuidBloat } from "../../src/rules/uuid-bloat.js";
 
 describe("formatMarkdown", () => {
-  it("summarizes finding counts and lists each finding in a table", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("summarizes finding counts and lists each finding in a table", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -19,9 +19,9 @@ describe("formatMarkdown", () => {
     expect(output).toMatch(/Total addressable waste: ~\d+ tokens/);
   });
 
-  it("aggregates across multiple files", () => {
-    const clean = analyze("summarize the ticket", { model: "gpt-4o", rules: [uuidBloat] });
-    const dirty = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("aggregates across multiple files", async () => {
+    const clean = await analyze("summarize the ticket", { model: "gpt-4o", rules: [uuidBloat] });
+    const dirty = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -34,14 +34,14 @@ describe("formatMarkdown", () => {
     expect(output).toContain("2 file(s), 1 finding(s)");
   });
 
-  it("omits the findings table when there are no findings", () => {
-    const report = analyze("nothing wasteful here", { model: "gpt-4o", rules: [uuidBloat] });
+  it("omits the findings table when there are no findings", async () => {
+    const report = await analyze("nothing wasteful here", { model: "gpt-4o", rules: [uuidBloat] });
     const output = formatMarkdown([{ file: "a.txt", report }]);
     expect(output).not.toContain("| File | Rule |");
   });
 
-  it("escapes pipe characters inside a finding message", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("escapes pipe characters inside a finding message", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });

@@ -1,19 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import type { Encoder } from "../src/encoder.js";
 import { resolveEncoder } from "../src/encoder.js";
 
 describe("resolveEncoder", () => {
-  it("gives an exact encoder for known OpenAI models", () => {
-    const encoder = resolveEncoder("gpt-4o");
+  it("gives an exact encoder for known OpenAI models", async () => {
+    const encoder = await resolveEncoder("gpt-4o");
     expect(encoder.mode).toBe("exact");
     expect(encoder.family).toBe("o200k_base");
   });
 
-  it("gives cl100k_base for gpt-4", () => {
-    expect(resolveEncoder("gpt-4").family).toBe("cl100k_base");
+  it("gives cl100k_base for gpt-4", async () => {
+    const encoder = await resolveEncoder("gpt-4");
+    expect(encoder.family).toBe("cl100k_base");
   });
 
-  it("gives an exact o200k_base encoder for gpt-6-astra", () => {
-    const encoder = resolveEncoder("gpt-6-astra");
+  it("gives an exact o200k_base encoder for gpt-6-astra", async () => {
+    const encoder = await resolveEncoder("gpt-6-astra");
     expect(encoder.mode).toBe("exact");
     expect(encoder.family).toBe("o200k_base");
   });
@@ -35,34 +37,38 @@ describe("resolveEncoder", () => {
     "gpt-6-sol",
     "gpt-6-luna",
     "gpt-6.1-sol",
-  ])("gives an exact o200k_base encoder for %s", (model) => {
-    const encoder = resolveEncoder(model);
+  ])("gives an exact o200k_base encoder for %s", async (model) => {
+    const encoder = await resolveEncoder(model);
     expect(encoder.mode).toBe("exact");
     expect(encoder.family).toBe("o200k_base");
   });
 
-  it("throws a clear error for a claude model with no calibration data", () => {
-    expect(() => resolveEncoder("claude-not-a-real-one")).toThrow(/no calibration data/);
+  it("throws a clear error for a claude model with no calibration data", async () => {
+    await expect(resolveEncoder("claude-not-a-real-one")).rejects.toThrow(/no calibration data/);
   });
 
-  it("gives a real estimate encoder for a calibrated claude model", () => {
-    const encoder = resolveEncoder("claude-sonnet-4-5");
+  it("gives a real estimate encoder for a calibrated claude model", async () => {
+    const encoder = await resolveEncoder("claude-sonnet-4-5");
     expect(encoder.mode).toBe("estimate");
     expect(encoder.family).toBe("anthropic");
     expect(encoder.countTokens("hello world")).toBeGreaterThan(0);
   });
 
-  it("throws for gemini, which isn't wired up at all", () => {
-    expect(() => resolveEncoder("gemini-1.5-pro").countTokens("hi")).toThrow(/not implemented/);
+  it("throws for gemini, which isn't wired up at all", async () => {
+    const encoder = await resolveEncoder("gemini-1.5-pro");
+    expect(() => encoder.countTokens("hi")).toThrow(/not implemented/);
   });
 
-  it("throws for a model it's never heard of", () => {
-    expect(() => resolveEncoder("not-a-real-model")).toThrow(/unknown model/);
+  it("throws for a model it's never heard of", async () => {
+    await expect(resolveEncoder("not-a-real-model")).rejects.toThrow(/unknown model/);
   });
 });
 
 describe("OpenAiEncoder", () => {
-  const encoder = resolveEncoder("gpt-4o");
+  let encoder: Encoder;
+  beforeAll(async () => {
+    encoder = await resolveEncoder("gpt-4o");
+  });
 
   it("countTokens agrees with tokenize().count", () => {
     const text = "The quick brown fox jumps over the lazy dog.";

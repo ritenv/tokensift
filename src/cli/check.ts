@@ -109,17 +109,19 @@ export async function runCheck(argv: string[], cwd: string): Promise<RunResult> 
     );
     const encoder = resolveAnthropicOverride(model, cwd, options.calibrationFile);
     const pricingOverrides = loadPricingOverrides(cwd, options.pricingFile);
-    const results = resolved.map(({ file, input }) => {
-      const key = relative(cwd, file);
-      const report = linter.analyze(input, {
-        path: key,
-        budget: budgetStore[key],
-        baseline: baselineStore[key],
-        encoder,
-        pricingOverrides,
-      });
-      return { file: key, report, text: typeof input === "string" ? input : undefined };
-    });
+    const results = await Promise.all(
+      resolved.map(async ({ file, input }) => {
+        const key = relative(cwd, file);
+        const report = await linter.analyze(input, {
+          path: key,
+          budget: budgetStore[key],
+          baseline: baselineStore[key],
+          encoder,
+          pricingOverrides,
+        });
+        return { file: key, report, text: typeof input === "string" ? input : undefined };
+      }),
+    );
 
     const output =
       options.format === "json"

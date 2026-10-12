@@ -4,8 +4,8 @@ import { formatPretty } from "../../src/cli/reporter-pretty.js";
 import { uuidBloat } from "../../src/rules/uuid-bloat.js";
 
 describe("formatPretty", () => {
-  it("lists the filename and each finding's rule id and message", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("lists the filename and each finding's rule id and message", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -16,14 +16,14 @@ describe("formatPretty", () => {
     expect(output).toContain("1 finding(s)");
   });
 
-  it("says 'no findings' for a clean file", () => {
-    const report = analyze("summarize the ticket", { model: "gpt-4o", rules: [uuidBloat] });
+  it("says 'no findings' for a clean file", async () => {
+    const report = await analyze("summarize the ticket", { model: "gpt-4o", rules: [uuidBloat] });
     const output = formatPretty([{ file: "clean.txt", report }]);
     expect(output).toContain("no findings");
   });
 
-  it("includes a top opportunities line when there's real token savings", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("includes a top opportunities line when there's real token savings", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -32,8 +32,8 @@ describe("formatPretty", () => {
     expect(output).toMatch(/total addressable waste ~= \d+ tokens/);
   });
 
-  it("adds ANSI color codes only when color is requested", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("adds ANSI color codes only when color is requested", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -43,8 +43,8 @@ describe("formatPretty", () => {
     expect(colored).toContain("\x1b[");
   });
 
-  it("shows a per-1K-calls dollar figure on the finding line and the total", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("shows a per-1K-calls dollar figure on the finding line and the total", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "gpt-4o",
       rules: [uuidBloat],
     });
@@ -53,8 +53,8 @@ describe("formatPretty", () => {
     expect(output).toMatch(/total addressable waste ~= \d+ tokens \(~\$[\d.]+ \/ 1K calls\)/);
   });
 
-  it("omits the dollar figure entirely when the model has no pricing data", () => {
-    const report = analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
+  it("omits the dollar figure entirely when the model has no pricing data", async () => {
+    const report = await analyze("id: 550e8400-e29b-41d4-a716-446655440000", {
       model: "custom-model",
       rules: [uuidBloat],
       encoder: {

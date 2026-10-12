@@ -16,12 +16,12 @@ interface MatcherContext {
   currentTestName?: string;
 }
 
-export function toBeUnderTokens(
+export async function toBeUnderTokens(
   received: AnalysisInput,
   limit: number,
   options: { model: string },
-): MatcherResult {
-  const { summary } = analyze(received, { model: options.model, rules: [] });
+): Promise<MatcherResult> {
+  const { summary } = await analyze(received, { model: options.model, rules: [] });
   const pass = summary.totalTokens <= limit;
   return {
     pass,
@@ -32,11 +32,14 @@ export function toBeUnderTokens(
   };
 }
 
-export function toHaveNoTokensiftErrors(
+export async function toHaveNoTokensiftErrors(
   received: AnalysisInput,
   options: { model: string; rules?: readonly Rule[] },
-): MatcherResult {
-  const report = analyze(received, { model: options.model, rules: options.rules ?? builtinRules });
+): Promise<MatcherResult> {
+  const report = await analyze(received, {
+    model: options.model,
+    rules: options.rules ?? builtinRules,
+  });
   const errors = report.findings.filter((f) => f.severity === "error");
   const pass = errors.length === 0;
   return {
@@ -60,11 +63,11 @@ function writeStore(path: string, store: BaselineStore): void {
   writeFileSync(path, `${JSON.stringify(store, null, 2)}\n`);
 }
 
-export function toMatchTokenBaseline(
+export async function toMatchTokenBaseline(
   this: MatcherContext,
   received: AnalysisInput,
   options: { model: string; baselineFile?: string; updateBaseline?: boolean },
-): MatcherResult {
+): Promise<MatcherResult> {
   if (!this?.testPath || !this?.currentTestName) {
     throw new Error(
       "toMatchTokenBaseline needs test context (testPath, currentTestName); call it through expect.extend, not directly",
@@ -76,7 +79,7 @@ export function toMatchTokenBaseline(
   const store = loadStore(baselinePath);
   const key = `${relative(process.cwd(), this.testPath)} > ${this.currentTestName}`;
 
-  const { summary } = analyze(received, { model: options.model, rules: [] });
+  const { summary } = await analyze(received, { model: options.model, rules: [] });
   const current = summary.totalTokens;
   const recorded = store[key];
 

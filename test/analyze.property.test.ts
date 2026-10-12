@@ -44,49 +44,49 @@ const span = fc
 const spanWithSaved = fc.record({ range: span, saved: fc.nat({ max: 1000 }) });
 
 describe("totalWasteTokens dedup (property-based)", () => {
-  it("matches a reference max-per-exact-range implementation for arbitrary findings", () => {
-    fc.assert(
-      fc.property(fc.array(spanWithSaved, { maxLength: 20 }), (spans) => {
+  it("matches a reference max-per-exact-range implementation for arbitrary findings", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(spanWithSaved, { maxLength: 20 }), async (spans) => {
         const text = "x".repeat(600);
-        const report = analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
+        const report = await analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
         expect(report.summary.totalWasteTokens).toBe(expectedTotal(spans));
       }),
     );
   });
 
-  it("never exceeds the naive sum of every finding's saved tokens", () => {
-    fc.assert(
-      fc.property(fc.array(spanWithSaved, { maxLength: 20 }), (spans) => {
+  it("never exceeds the naive sum of every finding's saved tokens", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(spanWithSaved, { maxLength: 20 }), async (spans) => {
         const text = "x".repeat(600);
-        const report = analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
+        const report = await analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
         const naiveSum = spans.reduce((sum, s) => sum + s.saved, 0);
         expect(report.summary.totalWasteTokens).toBeLessThanOrEqual(naiveSum);
       }),
     );
   });
 
-  it("is never negative", () => {
-    fc.assert(
-      fc.property(fc.array(spanWithSaved, { maxLength: 20 }), (spans) => {
+  it("is never negative", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(spanWithSaved, { maxLength: 20 }), async (spans) => {
         const text = "x".repeat(600);
-        const report = analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
+        const report = await analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
         expect(report.summary.totalWasteTokens).toBeGreaterThanOrEqual(0);
       }),
     );
   });
 
-  it("sums findings with distinct ranges in full, regardless of how much they overlap", () => {
+  it("sums findings with distinct ranges in full, regardless of how much they overlap", async () => {
     // this is the specific behavior the exact-range fix protects: a narrower finding nested
     // inside a broader one (different ranges) must be additive, not swallowed
-    fc.assert(
-      fc.property(
+    await fc.assert(
+      fc.asyncProperty(
         fc.integer({ min: 0, max: 100 }),
         fc.integer({ min: 200, max: 400 }),
         fc.integer({ min: 101, max: 199 }),
         fc.integer({ min: 1, max: 50 }),
         fc.nat({ max: 1000 }),
         fc.nat({ max: 1000 }),
-        (outerStart, outerEnd, innerStart, innerLen, outerSaved, innerSaved) => {
+        async (outerStart, outerEnd, innerStart, innerLen, outerSaved, innerSaved) => {
           const innerEnd = innerStart + innerLen;
           fc.pre(innerEnd < outerEnd);
           const spans = [
@@ -94,7 +94,7 @@ describe("totalWasteTokens dedup (property-based)", () => {
             { range: [innerStart, innerEnd] as [number, number], saved: innerSaved },
           ];
           const text = "x".repeat(500);
-          const report = analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
+          const report = await analyze(text, { model: "gpt-4o", rules: [ruleFromSpans(spans)] });
           expect(report.summary.totalWasteTokens).toBe(outerSaved + innerSaved);
         },
       ),

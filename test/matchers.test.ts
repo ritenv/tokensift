@@ -5,28 +5,28 @@ import { afterEach, describe, expect, it } from "vitest";
 import { toBeUnderTokens, toHaveNoTokensiftErrors, toMatchTokenBaseline } from "../src/matchers.js";
 
 describe("toBeUnderTokens", () => {
-  it("passes when the input is under the limit", () => {
-    const result = toBeUnderTokens("a short prompt", 100, { model: "gpt-4o" });
+  it("passes when the input is under the limit", async () => {
+    const result = await toBeUnderTokens("a short prompt", 100, { model: "gpt-4o" });
     expect(result.pass).toBe(true);
   });
 
-  it("fails when the input is over the limit", () => {
-    const result = toBeUnderTokens("a short prompt", 1, { model: "gpt-4o" });
+  it("fails when the input is over the limit", async () => {
+    const result = await toBeUnderTokens("a short prompt", 1, { model: "gpt-4o" });
     expect(result.pass).toBe(false);
     expect(result.message()).toContain("to be under 1 tokens");
   });
 });
 
 describe("toHaveNoTokensiftErrors", () => {
-  it("passes on a clean prompt", () => {
-    const result = toHaveNoTokensiftErrors("a short prompt", { model: "gpt-4o" });
+  it("passes on a clean prompt", async () => {
+    const result = await toHaveNoTokensiftErrors("a short prompt", { model: "gpt-4o" });
     expect(result.pass).toBe(true);
   });
 
-  it("fails when an error-severity rule fires", () => {
+  it("fails when an error-severity rule fires", async () => {
     const base64 =
       "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=";
-    const result = toHaveNoTokensiftErrors(`attachment:\n${base64}\nplease review`, {
+    const result = await toHaveNoTokensiftErrors(`attachment:\n${base64}\nplease review`, {
       model: "gpt-4o",
     });
     expect(result.pass).toBe(false);
@@ -46,9 +46,9 @@ describe("toMatchTokenBaseline", () => {
     if (scratchDir) rmSync(scratchDir, { recursive: true, force: true });
   });
 
-  it("records a new baseline and passes on the first run", () => {
+  it("records a new baseline and passes on the first run", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-matchers-"));
-    const result = toMatchTokenBaseline.call(ctx, "a short prompt", {
+    const result = await toMatchTokenBaseline.call(ctx, "a short prompt", {
       model: "gpt-4o",
       baselineFile: baselineFile(),
     });
@@ -56,19 +56,19 @@ describe("toMatchTokenBaseline", () => {
     expect(result.message()).toContain("recorded a new token baseline");
   });
 
-  it("passes on a second run within tolerance", () => {
+  it("passes on a second run within tolerance", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-matchers-"));
     const options = { model: "gpt-4o", baselineFile: baselineFile() };
-    toMatchTokenBaseline.call(ctx, "a short prompt", options);
-    const result = toMatchTokenBaseline.call(ctx, "a short prompt", options);
+    await toMatchTokenBaseline.call(ctx, "a short prompt", options);
+    const result = await toMatchTokenBaseline.call(ctx, "a short prompt", options);
     expect(result.pass).toBe(true);
   });
 
-  it("fails once the input grows past the recorded baseline's tolerance", () => {
+  it("fails once the input grows past the recorded baseline's tolerance", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-matchers-"));
     const options = { model: "gpt-4o", baselineFile: baselineFile() };
-    toMatchTokenBaseline.call(ctx, "a short prompt", options);
-    const result = toMatchTokenBaseline.call(
+    await toMatchTokenBaseline.call(ctx, "a short prompt", options);
+    const result = await toMatchTokenBaseline.call(
       ctx,
       "a short prompt that has grown a great deal longer than it used to be, with plenty of extra words piled on",
       options,
@@ -77,11 +77,11 @@ describe("toMatchTokenBaseline", () => {
     expect(result.message()).toContain("tolerance is 10%");
   });
 
-  it("updateBaseline accepts intentional growth", () => {
+  it("updateBaseline accepts intentional growth", async () => {
     scratchDir = mkdtempSync(join(tmpdir(), "tokensift-matchers-"));
     const options = { model: "gpt-4o", baselineFile: baselineFile() };
-    toMatchTokenBaseline.call(ctx, "a short prompt", options);
-    const result = toMatchTokenBaseline.call(
+    await toMatchTokenBaseline.call(ctx, "a short prompt", options);
+    const result = await toMatchTokenBaseline.call(
       ctx,
       "a short prompt that has grown a great deal longer than it used to be, with plenty of extra words piled on",
       { ...options, updateBaseline: true },
@@ -90,9 +90,9 @@ describe("toMatchTokenBaseline", () => {
     expect(result.message()).toContain("updated the token baseline");
   });
 
-  it("throws when called without test context", () => {
-    expect(() => toMatchTokenBaseline.call({}, "a short prompt", { model: "gpt-4o" })).toThrow(
-      /needs test context/,
-    );
+  it("throws when called without test context", async () => {
+    await expect(
+      toMatchTokenBaseline.call({}, "a short prompt", { model: "gpt-4o" }),
+    ).rejects.toThrow(/needs test context/);
   });
 });

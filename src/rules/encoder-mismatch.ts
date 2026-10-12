@@ -1,4 +1,4 @@
-import { resolveEncoder } from "../encoder.js";
+import { resolveEncoderFamily } from "../encoder.js";
 import { defineRule } from "../rule.js";
 import type { Finding } from "../types.js";
 
@@ -7,19 +7,15 @@ const WHY =
 
 // options.model is required even when options.encoder overrides resolveEncoder(model),
 // e.g. a locally-calibrated Claude model resolveEncoder doesn't know about (see
-// AnalyzeOptions.encoder's own doc comment), so resolveEncoder(ctx.model) throwing here
-// isn't a mismatch, it just means there's nothing to compare against.
+// AnalyzeOptions.encoder's own doc comment), so an unresolvable ctx.model here isn't a
+// mismatch, it just means there's nothing to compare against.
 export const encoderMismatch = defineRule({
   id: "encoder-mismatch",
   defaultSeverity: "warn",
   why: WHY,
   check(ctx, severity) {
-    let expectedFamily: string;
-    try {
-      expectedFamily = resolveEncoder(ctx.model).family;
-    } catch {
-      return [];
-    }
+    const expectedFamily = resolveEncoderFamily(ctx.model);
+    if (expectedFamily === undefined) return [];
 
     if (expectedFamily === ctx.encoder.family) return [];
 

@@ -3,8 +3,8 @@ import { analyze } from "../../src/analyze.js";
 import { digitFragmentation } from "../../src/rules/digit-fragmentation.js";
 
 describe("digit-fragmentation", () => {
-  it("flags a full ISO-8601 timestamp with milliseconds", () => {
-    const report = analyze("event logged at 2024-08-15T14:32:07.123Z during the outage", {
+  it("flags a full ISO-8601 timestamp with milliseconds", async () => {
+    const report = await analyze("event logged at 2024-08-15T14:32:07.123Z during the outage", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });
@@ -13,32 +13,32 @@ describe("digit-fragmentation", () => {
     expect(finding.tokens.current).toBeGreaterThan(finding.tokens.afterFix);
   });
 
-  it("flags a timestamp without milliseconds", () => {
-    const report = analyze("created_at: 2024-08-15T14:32:07Z", {
+  it("flags a timestamp without milliseconds", async () => {
+    const report = await analyze("created_at: 2024-08-15T14:32:07Z", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });
     expect(report.findings).toHaveLength(1);
   });
 
-  it("ignores an invalid date that merely looks ISO-shaped", () => {
-    const report = analyze("id: 9999-99-99T99:99:99Z", {
+  it("ignores an invalid date that merely looks ISO-shaped", async () => {
+    const report = await analyze("id: 9999-99-99T99:99:99Z", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("finds nothing in prose with no timestamps", () => {
-    const report = analyze("summarize the attached document in three bullet points", {
+  it("finds nothing in prose with no timestamps", async () => {
+    const report = await analyze("summarize the attached document in three bullet points", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("suggests epoch milliseconds, not truncated epoch seconds, when the timestamp has sub-second precision", () => {
-    const report = analyze("logged_at: 2024-01-15T10:30:45.123Z", {
+  it("suggests epoch milliseconds, not truncated epoch seconds, when the timestamp has sub-second precision", async () => {
+    const report = await analyze("logged_at: 2024-01-15T10:30:45.123Z", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });
@@ -46,17 +46,17 @@ describe("digit-fragmentation", () => {
     expect(report.findings[0]?.message).toContain("1705314645123");
   });
 
-  it("does not flag an invalid calendar date that Date.parse would otherwise silently roll over", () => {
+  it("does not flag an invalid calendar date that Date.parse would otherwise silently roll over", async () => {
     // February never has a 30th; Date.parse rolls this to March 1st instead of rejecting it
-    const report = analyze("logged_at: 2024-02-30T10:30:45Z", {
+    const report = await analyze("logged_at: 2024-02-30T10:30:45Z", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });
     expect(report.findings).toEqual([]);
   });
 
-  it("does not flag an out-of-range hour", () => {
-    const report = analyze("logged_at: 2024-01-15T25:30:45Z", {
+  it("does not flag an out-of-range hour", async () => {
+    const report = await analyze("logged_at: 2024-01-15T25:30:45Z", {
       model: "gpt-4o",
       rules: [digitFragmentation],
     });

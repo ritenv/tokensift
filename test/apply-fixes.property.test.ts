@@ -39,9 +39,9 @@ function shuffle<T>(arr: T[], seedArb: number[]): T[] {
 }
 
 describe("applyFixes (property-based)", () => {
-  it("never throws, including on out-of-order, overlapping, or out-of-bounds ranges", () => {
-    fc.assert(
-      fc.property(
+  it("never throws, including on out-of-order, overlapping, or out-of-bounds ranges", async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.integer({ min: 0, max: 200 }),
         fc.array(
           fc.record({
@@ -52,9 +52,9 @@ describe("applyFixes (property-based)", () => {
           }),
           { maxLength: 15 },
         ),
-        (length, specs) => {
+        async (length, specs) => {
           const text = "x".repeat(length);
-          const report = analyze(text, { model: "gpt-4o", rules: [ruleFromFixes(specs)] });
+          const report = await analyze(text, { model: "gpt-4o", rules: [ruleFromFixes(specs)] });
           expect(() => report.applyFixes()).not.toThrow();
           expect(typeof report.applyFixes()).toBe("string");
         },
@@ -62,7 +62,7 @@ describe("applyFixes (property-based)", () => {
     );
   });
 
-  it("applies every fix in a disjoint set, regardless of the order findings were reported in", () => {
+  it("applies every fix in a disjoint set, regardless of the order findings were reported in", async () => {
     const disjointCase = fc
       .integer({ min: 20, max: 300 })
       .chain((length) =>
@@ -87,8 +87,8 @@ describe("applyFixes (property-based)", () => {
         });
       });
 
-    fc.assert(
-      fc.property(disjointCase, ({ length, boundaries, fixedFlags, shuffleSeed }) => {
+    await fc.assert(
+      fc.asyncProperty(disjointCase, async ({ length, boundaries, fixedFlags, shuffleSeed }) => {
         const text = "x".repeat(length);
         const segments: [number, number][] = [];
         for (let i = 0; i < boundaries.length - 1; i++)
@@ -107,20 +107,23 @@ describe("applyFixes (property-based)", () => {
         });
 
         const shuffledSpecs = shuffle(specs, shuffleSeed);
-        const report = analyze(text, { model: "gpt-4o", rules: [ruleFromFixes(shuffledSpecs)] });
+        const report = await analyze(text, {
+          model: "gpt-4o",
+          rules: [ruleFromFixes(shuffledSpecs)],
+        });
         expect(report.applyFixes()).toBe(expectedParts.join(""));
       }),
     );
   });
 
-  it("of two overlapping fixes, only the one starting earlier is applied", () => {
-    fc.assert(
-      fc.property(
+  it("of two overlapping fixes, only the one starting earlier is applied", async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.integer({ min: 0, max: 250 }),
         fc.integer({ min: 2, max: 10 }),
         fc.integer({ min: 1, max: 9 }),
         fc.integer({ min: 1, max: 10 }),
-        (aStart, aLen, bOffset, bLen) => {
+        async (aStart, aLen, bOffset, bLen) => {
           const aEnd = aStart + aLen;
           const bStart = aStart + bOffset;
           fc.pre(bStart < aEnd); // guarantee real overlap
@@ -132,7 +135,7 @@ describe("applyFixes (property-based)", () => {
             { range: [aStart, aEnd], replacement: "<<FIXA>>" },
             { range: [bStart, bEnd], replacement: "<<FIXB>>" },
           ];
-          const report = analyze(text, { model: "gpt-4o", rules: [ruleFromFixes(specs)] });
+          const report = await analyze(text, { model: "gpt-4o", rules: [ruleFromFixes(specs)] });
           const result = report.applyFixes();
 
           expect(result).toBe(`${text.slice(0, aStart)}<<FIXA>>${text.slice(aEnd)}`);
@@ -142,9 +145,9 @@ describe("applyFixes (property-based)", () => {
     );
   });
 
-  it("respects ruleIds filtering: fixes from excluded rules never appear, and don't block others", () => {
-    fc.assert(
-      fc.property(fc.integer({ min: 10, max: 100 }), (length) => {
+  it("respects ruleIds filtering: fixes from excluded rules never appear, and don't block others", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 10, max: 100 }), async (length) => {
         const text = "x".repeat(length);
         const includedRule = ruleFromFixes(
           [{ range: [0, 3], replacement: "<<KEEP>>" }],
@@ -155,7 +158,10 @@ describe("applyFixes (property-based)", () => {
           "excluded",
         );
 
-        const report = analyze(text, { model: "gpt-4o", rules: [includedRule, excludedRule] });
+        const report = await analyze(text, {
+          model: "gpt-4o",
+          rules: [includedRule, excludedRule],
+        });
         const result = report.applyFixes({ ruleIds: ["included"] });
         expect(result).toContain("<<KEEP>>");
         expect(result).not.toContain("<<DROP>>");
