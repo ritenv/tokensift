@@ -4,12 +4,18 @@
 //
 // Anthropic: https://platform.claude.com/docs/en/build-with-claude/prompt-caching
 // OpenAI: https://developers.openai.com/api/docs/guides/prompt-caching
-// Verified: 2026-08-29
+// Verified: 2026-08-29, Anthropic re-verified 2026-10-12 for the 5/5.5-generation models
 
 export const CACHE_MIN_TOKENS: Record<string, number> = {
   "claude-opus-4-5": 4096,
   "claude-sonnet-4-5": 1024,
   "claude-haiku-4-5": 4096,
+  "claude-opus-5": 512,
+  "claude-sonnet-5": 1024,
+  "claude-opus-5-5": 512,
+  "claude-sonnet-5-5": 512,
+  "claude-haiku-5-5": 512,
+  "claude-fable-5-1": 512,
 };
 
 // Every currently-bundled OpenAI model predates whatever "GPT-5.6+" refers to in OpenAI's

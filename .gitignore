@@ -9,3 +9,4 @@ bun.lockb
 test/data-rows.test.ts
 RULE_AUDIT.md
 smoke-test
+.env

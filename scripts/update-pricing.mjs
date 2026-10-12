@@ -62,6 +62,12 @@ const SUPPORTED_MODELS = [
   "claude-opus-4-5",
   "claude-sonnet-4-5",
   "claude-haiku-4-5",
+  "claude-opus-5",
+  "claude-sonnet-5",
+  "claude-opus-5-5",
+  "claude-sonnet-5-5",
+  "claude-haiku-5-5",
+  "claude-fable-5-1",
 ];
 
 async function main() {

@@ -379,7 +379,7 @@ The measurement `budget init` does is also available directly from the library, 
 
 ### `calibrate`
 
-There's a real Anthropic estimate encoder, with bundled calibration data for the current-generation models: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` (measured mean absolute error ~7.6%, against a 28-sample dedicated fixture corpus, real calls to Anthropic's token-counting endpoint). Any other `claude-*` id throws `no calibration data for '<model>'`, naming the `calibrate` command as the way to add one. Findings on a calibrated model carry `confidence: "estimate"`, same honesty rule as the rest of this package: there's no public BPE table to be exact against, only an estimate with a measured error, never presented as exact.
+There's a real Anthropic estimate encoder, with bundled calibration data for 9 models: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` (measured mean absolute error ~7.6%), `claude-opus-5`, `claude-sonnet-5` (~10.6%), and `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1` (~9.8%), each against the same 28-sample dedicated fixture corpus and real calls to Anthropic's token-counting endpoint. Models within each group measure identically, consistent with Anthropic sharing one tokenizer per release wave; the groups differ from each other because Anthropic's own docs confirm the tokenizer changed at Opus 4.7. Any other `claude-*` id throws `no calibration data for '<model>'`, naming the `calibrate` command as the way to add one. Findings on a calibrated model carry `confidence: "estimate"`, same honesty rule as the rest of this package: there's no public BPE table to be exact against, only an estimate with a measured error, never presented as exact.
 
 Run your own calibration against your own Anthropic key and your own prompts:
 
@@ -503,7 +503,7 @@ expect.extend(matchers);
 | --- | --- | --- |
 | `o200k_base` | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `chatgpt-4o-latest`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5-chat-latest`, `gpt-5-codex`, `gpt-5.1`, `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.3-codex`, `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6.1-sol`, `gpt-6-astra`, `o1`, `o1-mini`, `o1-pro`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`, `codex-mini-latest`, `computer-use-preview` | exact |
 | `cl100k_base` | `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo` | exact |
-| anthropic | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5` | estimate |
+| anthropic | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1` | estimate |
 
 Any other model throws a clear error naming what's supported, instead of silently guessing, including `gpt-oss` models, which use a different encoding this package doesn't implement yet. Pass a custom `Encoder` via `options.encoder` for anything else.
 
