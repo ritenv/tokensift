@@ -54,6 +54,20 @@ describe("resolveEncoder", () => {
     expect(encoder.countTokens("hello world")).toBeGreaterThan(0);
   });
 
+  it.each([
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5",
+    "claude-fable-5-1",
+  ])("gives a real estimate encoder for %s", async (model) => {
+    const encoder = await resolveEncoder(model);
+    expect(encoder.mode).toBe("estimate");
+    expect(encoder.family).toBe("anthropic");
+    expect(encoder.countTokens("hello world")).toBeGreaterThan(0);
+  });
+
   it("throws for gemini, which isn't wired up at all", async () => {
     const encoder = await resolveEncoder("gemini-1.5-pro");
     expect(() => encoder.countTokens("hi")).toThrow(/not implemented/);
