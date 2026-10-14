@@ -84,4 +84,29 @@ describe("uuid-bloat", () => {
     expect(report.findings[1]?.suggestion).toContain("id-2");
     expect(report.findings[2]?.suggestion).toContain("id-1");
   });
+
+  it("flags a standalone ULID", async () => {
+    const ulid = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+    const report = await analyze(`record id: ${ulid}`, { model: "gpt-4o", rules: [uuidBloat] });
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0]?.message).toContain(ulid);
+    expect(report.findings[0]?.message).toContain("ULID");
+  });
+
+  it("does not flag an all-letters run the same length as a ULID", async () => {
+    const report = await analyze("the quick brown fox jumps over the hazy crazy zebra", {
+      model: "gpt-4o",
+      rules: [uuidBloat],
+    });
+    expect(report.findings).toEqual([]);
+  });
+
+  it("does not flag a ULID-length run containing I, L, O or U", async () => {
+    // same length as a ULID, but uses letters Crockford base32 excludes
+    const report = await analyze("payload: OILOILOILOILOILOILOILOIL1", {
+      model: "gpt-4o",
+      rules: [uuidBloat],
+    });
+    expect(report.findings).toEqual([]);
+  });
 });
