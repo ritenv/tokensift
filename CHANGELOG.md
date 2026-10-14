@@ -1,5 +1,11 @@
 # tokensift
 
+## 2.2.0
+
+### Minor Changes
+
+- e6ca89d: `uuid-bloat` now also flags ULIDs, not just canonical UUIDs.
+
 ## 2.1.0
 
 ### Minor Changes
