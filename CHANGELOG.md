@@ -1,5 +1,11 @@
 # tokensift
 
+## 2.3.0
+
+### Minor Changes
+
+- ba3adfa: Add real calibration, cache-minimum, and pricing data for `claude-fable-5`.
+
 ## 2.2.0
 
 ### Minor Changes
