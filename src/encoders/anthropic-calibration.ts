@@ -78,6 +78,20 @@ export const ANTHROPIC_CALIBRATIONS: Record<string, AnthropicCalibration> = {
     measuredAt: "2026-10-12T14:03:18.419Z",
     meanAbsPercentError: 10.575183516758742,
   },
+  "claude-fable-5": {
+    model: "claude-fable-5",
+    ratios: {
+      word: 3.6875671382292885,
+      punct: 1.8606270125742799,
+      whitespace: 3.539067365945097,
+      "digit-fragment": 1.396954734062513,
+      "hex-fragment": 1.580958786545801,
+      other: 1.6619456766834062,
+    },
+    sampleCount: 28,
+    measuredAt: "2026-11-01T09:56:48.728Z",
+    meanAbsPercentError: 10.575183516758742,
+  },
   "claude-opus-5-5": {
     model: "claude-opus-5-5",
     ratios: {

@@ -4,7 +4,8 @@
 //
 // Anthropic: https://platform.claude.com/docs/en/build-with-claude/prompt-caching
 // OpenAI: https://developers.openai.com/api/docs/guides/prompt-caching
-// Verified: 2026-08-29, Anthropic re-verified 2026-10-12 for the 5/5.5-generation models
+// Verified: 2026-08-29, Anthropic re-verified 2026-10-12 for the 5/5.5-generation models,
+// claude-fable-5 added 2026-11-01
 
 export const CACHE_MIN_TOKENS: Record<string, number> = {
   "claude-opus-4-5": 4096,
@@ -12,6 +13,7 @@ export const CACHE_MIN_TOKENS: Record<string, number> = {
   "claude-haiku-4-5": 4096,
   "claude-opus-5": 512,
   "claude-sonnet-5": 1024,
+  "claude-fable-5": 512,
   "claude-opus-5-5": 512,
   "claude-sonnet-5-5": 512,
   "claude-haiku-5-5": 512,
